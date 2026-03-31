@@ -1,0 +1,29 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+export async function GET() {
+    try {
+        const supabase = createAdminClient()
+        const { data, error } = await supabase.from('buses').select('*').order('created_at', { ascending: false })
+        if (error) throw error
+        return NextResponse.json(data)
+    } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to fetch buses'
+        return NextResponse.json({ message }, { status: 500 })
+    }
+}
+
+export async function POST(req: NextRequest) {
+    try {
+        const payload = await req.json()
+        const supabase = createAdminClient()
+        const { data, error } = await supabase.from('buses').insert(payload).select().single()
+        if (error) {
+            return NextResponse.json({ message: error.message }, { status: 400 })
+        }
+        return NextResponse.json(data, { status: 201 })
+    } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unexpected error'
+        return NextResponse.json({ message }, { status: 500 })
+    }
+}

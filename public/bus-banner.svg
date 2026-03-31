@@ -1,0 +1,66 @@
+<svg width="1800" height="980" viewBox="0 0 1800 980" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="nightSky" x1="900" y1="40" x2="900" y2="980" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#547EE6"/>
+      <stop offset="0.42" stop-color="#2D57B1"/>
+      <stop offset="1" stop-color="#0A1637"/>
+    </linearGradient>
+    <radialGradient id="headlightGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1336 520) rotate(90) scale(150 260)">
+      <stop stop-color="#FFF7D8" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#FFF7D8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cityGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1260 156) rotate(90) scale(126 126)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="busPaint" x1="608" y1="320" x2="1356" y2="748" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FBFF" stop-opacity="0.28"/>
+      <stop offset="0.52" stop-color="#CFE0FF" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#92AEEA" stop-opacity="0.06"/>
+    </linearGradient>
+    <linearGradient id="windowGlass" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#C8D8FF" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#E7F0FF" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="roadFade" x1="900" y1="612" x2="900" y2="980" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0D1B43" stop-opacity="0"/>
+      <stop offset="1" stop-color="#050B19" stop-opacity="0.88"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1800" height="980" fill="url(#nightSky)"/>
+  <circle cx="1260" cy="156" r="126" fill="url(#cityGlow)"/>
+
+  <path d="M0 720C232 630 494 618 760 666C1040 716 1318 706 1800 566V980H0V720Z" fill="url(#roadFade)"/>
+  <path d="M0 636C134 574 286 536 460 538C648 540 790 604 1018 602C1270 600 1490 520 1800 374V650C1448 744 1168 760 854 712C536 664 242 674 0 760V636Z" fill="white" fill-opacity="0.08"/>
+
+  <g opacity="0.97">
+    <path d="M526 402C526 348.98 568.98 306 622 306H1270C1343.45 306 1403 365.549 1403 439V598C1403 673.663 1341.66 735 1266 735H626C570.772 735 526 690.228 526 635V402Z" fill="url(#busPaint)"/>
+    <path d="M526 402C526 348.98 568.98 306 622 306H1270C1343.45 306 1403 365.549 1403 439V598C1403 673.663 1341.66 735 1266 735H626C570.772 735 526 690.228 526 635V402Z" stroke="white" stroke-opacity="0.2" stroke-width="6"/>
+    <path d="M592 368C592 349.222 607.222 334 626 334H1234C1252.78 334 1268 349.222 1268 368V494H592V368Z" fill="url(#windowGlass)"/>
+    <rect x="618" y="358" width="174" height="108" rx="20" fill="white" fill-opacity="0.11"/>
+    <rect x="812" y="358" width="174" height="108" rx="20" fill="white" fill-opacity="0.11"/>
+    <rect x="1006" y="358" width="174" height="108" rx="20" fill="white" fill-opacity="0.11"/>
+    <rect x="1200" y="410" width="94" height="190" rx="18" fill="white" fill-opacity="0.08"/>
+    <path d="M582 528H1344" stroke="white" stroke-opacity="0.15" stroke-width="6" stroke-linecap="round"/>
+    <path d="M640 602H1184" stroke="white" stroke-opacity="0.18" stroke-width="11" stroke-linecap="round"/>
+    <path d="M542 444H470C441.281 444 418 467.281 418 496V570C418 598.719 441.281 622 470 622H526" stroke="white" stroke-opacity="0.16" stroke-width="6" stroke-linecap="round"/>
+    <path d="M1404 432H1464C1490.51 432 1512 453.49 1512 480V562C1512 588.51 1490.51 610 1464 610H1386" stroke="white" stroke-opacity="0.16" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="672" cy="738" r="72" fill="#081733" fill-opacity="0.7"/>
+    <circle cx="672" cy="738" r="42" fill="#EDF4FF" fill-opacity="0.92"/>
+    <circle cx="1194" cy="738" r="72" fill="#081733" fill-opacity="0.7"/>
+    <circle cx="1194" cy="738" r="42" fill="#EDF4FF" fill-opacity="0.92"/>
+    <circle cx="1328" cy="532" r="13" fill="#FFF8DE" fill-opacity="0.8"/>
+    <circle cx="1328" cy="532" r="150" fill="url(#headlightGlow)"/>
+  </g>
+
+  <g opacity="0.22">
+    <rect x="112" y="154" width="14" height="54" rx="7" fill="white"/>
+    <rect x="154" y="132" width="14" height="76" rx="7" fill="white"/>
+    <rect x="196" y="102" width="14" height="106" rx="7" fill="white"/>
+    <rect x="238" y="146" width="14" height="62" rx="7" fill="white"/>
+    <rect x="1500" y="132" width="14" height="76" rx="7" fill="white"/>
+    <rect x="1542" y="104" width="14" height="104" rx="7" fill="white"/>
+    <rect x="1584" y="148" width="14" height="60" rx="7" fill="white"/>
+  </g>
+</svg>

@@ -1,0 +1,54 @@
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import { Profile, Seat } from '@/types/supabase'
+
+// Auth Store
+interface AuthState {
+    user: Profile | null
+    setUser: (user: Profile | null) => void
+}
+export const useAuthStore = create<AuthState>()(
+    persist(
+        (set) => ({
+            user: null,
+            setUser: (user) => set({ user }),
+        }),
+        { name: 'auth-store' }
+    )
+)
+
+// Booking Store - tracks in-progress seat selection
+interface BookingState {
+    tripId: string | null
+    selectedSeats: Seat[]
+    lockedSeats: string[]
+    sessionId: string
+    setTripId: (tripId: string | null) => void
+    toggleSeat: (seat: Seat) => void
+    clearSeats: () => void
+    setLockedSeats: (seats: string[] | ((prev: string[]) => string[])) => void
+    setSessionId: (sessionId: string) => void
+    isSeatLocked: (seatLabel: string) => boolean
+}
+export const useBookingStore = create<BookingState>((set, get) => ({
+    tripId: null,
+    selectedSeats: [],
+    lockedSeats: [],
+    sessionId: '',
+    setTripId: (tripId) => set({ tripId, selectedSeats: [] }),
+    toggleSeat: (seat) =>
+        set((state) => {
+            const exists = state.selectedSeats.find((s) => s.label === seat.label)
+            return {
+                selectedSeats: exists
+                    ? state.selectedSeats.filter((s) => s.label !== seat.label)
+                    : [...state.selectedSeats, seat],
+            }
+        }),
+    clearSeats: () => set({ selectedSeats: [], tripId: null, lockedSeats: [] }),
+    setLockedSeats: (seats) => set((state) => ({
+        lockedSeats: typeof seats === 'function' ? seats(state.lockedSeats) : seats
+    })),
+    setSessionId: (sessionId) => set({ sessionId }),
+    isSeatLocked: (seatLabel) => get().lockedSeats.includes(seatLabel),
+}))
