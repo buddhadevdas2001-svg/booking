@@ -1,6 +1,5 @@
 
-> booking@0.1.0 dev
-> next dev --webpack --port 3010
+
 
 ▲ Next.js 16.2.1 (webpack)
 - Local:         http://localhost:3010
@@ -8,5 +7,3 @@
 - Environments: .env.local
 ✓ Ready in 582ms
 
-○ Compiling / ...
- GET / 200 in 16.7s (next.js: 16.2s, application-code: 527ms)
