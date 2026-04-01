@@ -11,6 +11,7 @@ VALUES
     ('Mercedes-Benz SHD', 'WB-02-D-3456', 'AC Sleeper Lux', 36, ARRAY['AC', 'WiFi', 'Charging', 'Individual TV'], true)
 ON CONFLICT (registration_number) DO UPDATE SET is_active = true;
 
+
 -- 2. Insert Popular Routes
 INSERT INTO public.routes (origin, destination, distance_km, estimated_duration_minutes, is_active)
 VALUES 

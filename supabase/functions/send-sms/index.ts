@@ -6,6 +6,7 @@ serve(async (req) => {
   const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID')
   const authToken = Deno.env.get('TWILIO_AUTH_TOKEN')
   const from = Deno.env.get('TWILIO_PHONE_NUMBER')
+  
 
   if (!to || !message) {
     return new Response(JSON.stringify({ error: 'to and message are required' }), {

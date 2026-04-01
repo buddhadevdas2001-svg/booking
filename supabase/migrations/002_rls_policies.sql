@@ -14,6 +14,7 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
 
+
 -- =====================================================
 -- HELPER FUNCTION: CHECK IF USER IS ADMIN
 -- =====================================================

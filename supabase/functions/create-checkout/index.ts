@@ -56,6 +56,7 @@ serve(async (req) => {
         user_id: booking.user_id,
         seat_labels: JSON.stringify(booking.booking_seats.map((s: any) => s.seat_label)),
       },
+      
       customer_email: booking.contact_email,
     })
 

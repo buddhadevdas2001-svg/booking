@@ -7,6 +7,7 @@ ALTER TABLE seat_locks REPLICA IDENTITY FULL;
 ALTER TABLE bookings REPLICA IDENTITY FULL;
 ALTER TABLE trips REPLICA IDENTITY FULL;
 
+
 -- Add tables to realtime publication
 BEGIN;
   DROP PUBLICATION IF EXISTS supabase_realtime;

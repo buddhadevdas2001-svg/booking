@@ -2,6 +2,7 @@
 -- GRANT GLOBAL ADMIN ACCESS (DEVELOPMENT SAFETY NET)
 -- =====================================================
 
+
 -- 1. Function to promote any user to Admin via email
 CREATE OR REPLACE FUNCTION public.make_admin_by_email(p_email TEXT)
 RETURNS VOID AS $$

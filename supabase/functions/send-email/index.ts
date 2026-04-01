@@ -17,6 +17,7 @@ serve(async (req) => {
       Authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
       'Content-Type': 'application/json',
     },
+    
     body: JSON.stringify({
       from: 'Shamolly <bookings@shamolly.com>',
       to: Array.isArray(to) ? to : [to],
@@ -29,6 +30,6 @@ serve(async (req) => {
   const body = await response.text()
   return new Response(body, {
     status: response.status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json'},
   })
 })

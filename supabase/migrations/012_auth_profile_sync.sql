@@ -2,6 +2,7 @@
 -- AUTO-SYNC AUTH USERS TO PROFILES (SAFETY NET)
 -- =====================================================
 
+
 -- 1. Ensure the sync function exists
 CREATE OR REPLACE FUNCTION public.sync_auth_users_to_profiles()
 RETURNS VOID AS $$

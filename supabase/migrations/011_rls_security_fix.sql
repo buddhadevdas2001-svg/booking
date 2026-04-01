@@ -2,6 +2,7 @@
 -- COMPREHENSIVE RLS ENFORCEMENT & PLATFORM SECURITY
 -- =====================================================
 
+
 -- 1. Enable RLS on all existing tables
 ALTER TABLE IF EXISTS profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS buses ENABLE ROW LEVEL SECURITY;

@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS seat_layouts (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+
 -- Trips: link to specific seat layout + pricing knobs
 ALTER TABLE trips
     ADD COLUMN IF NOT EXISTS seat_layout_id UUID REFERENCES seat_layouts(id),

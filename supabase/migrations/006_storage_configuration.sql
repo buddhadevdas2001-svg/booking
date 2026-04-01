@@ -39,6 +39,7 @@ CREATE POLICY "System can update QR codes"
   ON storage.objects FOR UPDATE
   USING (bucket_id = 'qr-codes' AND auth.role() = 'service_role');
 
+
 -- Documents bucket policies
 CREATE POLICY "Admin can manage documents"
   ON storage.objects FOR ALL

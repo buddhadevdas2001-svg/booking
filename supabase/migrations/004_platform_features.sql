@@ -23,6 +23,7 @@ VALUES
     ('documents', 'documents', false)
 ON CONFLICT (id) DO NOTHING;
 
+
 DO $$
 BEGIN
     IF NOT EXISTS (

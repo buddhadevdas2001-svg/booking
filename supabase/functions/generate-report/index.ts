@@ -7,6 +7,7 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 )
 
+
 serve(async (req) => {
   const { period = 'daily', format = 'json' } = await req.json().catch(() => ({ period: 'daily', format: 'json' }))
 

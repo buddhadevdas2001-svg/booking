@@ -23,6 +23,7 @@ DO $$ BEGIN
     CREATE TYPE payment_status AS ENUM ('pending','succeeded','failed','refunded','partially_refunded');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+
 -- ================= TABLES =================
 
 CREATE TABLE IF NOT EXISTS profiles (
