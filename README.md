@@ -1,8 +1,4 @@
-# Shamolly Clone - Bus Agency Management System
 
-A comprehensive bus booking system built with **Supabase** (complete backend solution) and **Next.js**, featuring real-time seat locking, Stripe payments, and dynamic pricing.
-
-## 🚀 Features
 
 ### Core Features
 - ✅ **Admin Dashboard** - Complete bus and trip management
