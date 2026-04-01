@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAdminRequest } from '@/lib/admin-auth'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    const auth = await requireAdminRequest()
+    if (!auth.ok) return auth.response
     const { id } = await params
     try {
         const supabase = createAdminClient()
@@ -15,6 +18,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    const auth = await requireAdminRequest()
+    if (!auth.ok) return auth.response
     const { id } = await params
     try {
         const payload = await req.json()
@@ -29,6 +34,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    const auth = await requireAdminRequest()
+    if (!auth.ok) return auth.response
     const { id } = await params
     try {
         const supabase = createAdminClient()

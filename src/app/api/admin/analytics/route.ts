@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAdminRequest } from '@/lib/admin-auth'
 
 type BookingRow = { final_amount: number | null; created_at: string; trip?: { route?: { origin?: string; destination?: string } } }
 type TripRow = { route?: { origin?: string; destination?: string }; bus?: { bus_type?: string }; available_seats?: number | null; total_seats?: number | null }
 
 export async function GET() {
+    const auth = await requireAdminRequest()
+    if (!auth.ok) return auth.response
     const supabase = createAdminClient()
     const since = new Date()
     since.setDate(since.getDate() - 30)

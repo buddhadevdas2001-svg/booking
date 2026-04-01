@@ -33,16 +33,21 @@ import {
   IconButton,
   ToggleButtonGroup,
   ToggleButton,
-  } from '@mui/material'
-  import { useQuery } from '@tanstack/react-query'
-  import { seedDatabase } from '@/lib/seed'
+  NoSsr,
+  Skeleton,
+} from '@mui/material'
+import { useQuery } from '@tanstack/react-query'
+import { seedDatabase } from '@/lib/seed'
+import type { AdminAnalytics, AdminSummary } from '@/types/supabase'
+
+const DASHBOARD_CHART_COLORS = ['#3b82f6', '#8b5cf6', '#ec489a', '#f97316']
 
 export default function AdminDashboardPage() {
   const theme = useTheme()
   const [timeframe, setTimeframe] = useState('week')
   const [seeding, setSeeding] = useState(false)
 
-  const { data: summary, isLoading } = useQuery({
+  const { data: summary, isLoading } = useQuery<AdminSummary>({
     queryKey: ['admin-summary'],
     queryFn: async () => {
       const res = await fetch('/api/admin/summary')
@@ -51,7 +56,7 @@ export default function AdminDashboardPage() {
     },
   })
 
-  const { data: analytics } = useQuery({
+  const { data: analytics } = useQuery<AdminAnalytics>({
     queryKey: ['admin-analytics'],
     queryFn: async () => {
       const res = await fetch('/api/admin/analytics')
@@ -83,9 +88,12 @@ export default function AdminDashboardPage() {
   }
 
   const recentBookings = summary?.recentBookings ?? []
-  const upcomingTrips = summary?.upcomingTrips ?? []
   const revenueData = analytics?.revenueSeries ?? []
-  const bookingData = analytics?.busTypes ?? []
+  const bookingData = (analytics?.busTypes ?? []).map((item, index) => ({
+    ...item,
+    color: item.color || DASHBOARD_CHART_COLORS[index % DASHBOARD_CHART_COLORS.length],
+  }))
+  const upcomingTrips = summary?.upcomingTrips ?? []
 
   return (
     <Stack spacing={4}>
@@ -138,7 +146,7 @@ export default function AdminDashboardPage() {
       </Paper>
 
       {/* Stats Grid */}
-      <Grid container spacing={3}>
+        <Grid container spacing={3}>
         {stats.map((stat, i) => (
           <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={i} component="div">
             <Paper
@@ -173,7 +181,7 @@ export default function AdminDashboardPage() {
 
       {/* Charts Grid */}
       <Grid container spacing={4}>
-        <Grid size={{ xs: 12, lg: 8 }}>
+      <Grid size={{ xs: 12, lg: 8 }} sx={{ minWidth: 0 }}>
           <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
               <Typography variant="h6" sx={{ fontWeight: 800 }}>Revenue Overview</Typography>
@@ -183,40 +191,44 @@ export default function AdminDashboardPage() {
                 <ToggleButton value="month" sx={{ px: 2, fontWeight: 700 }}>Month</ToggleButton>
               </ToggleButtonGroup>
             </Stack>
-            <Box sx={{ height: 300, width: '100%' }}>
-              <ResponsiveContainer>
-                <LineChart data={revenueData}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: theme.shadows[8] }}
-                  />
-                  <Line type="monotone" dataKey="revenue" stroke={theme.palette.primary.main} strokeWidth={4} dot={{ r: 6, fill: theme.palette.primary.main, strokeWidth: 2, stroke: '#fff' }} />
-                </LineChart>
-              </ResponsiveContainer>
+            <Box sx={{ height: 300, width: '100%', minWidth: 0, minHeight: 0 }}>
+              <NoSsr fallback={<Skeleton variant="rounded" height={300} sx={{ borderRadius: 4 }} />}>
+                <ResponsiveContainer>
+                  <LineChart data={revenueData}>
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 12, border: 'none', boxShadow: theme.shadows[8] }}
+                    />
+                    <Line type="monotone" dataKey="revenue" stroke={theme.palette.primary.main} strokeWidth={4} dot={{ r: 6, fill: theme.palette.primary.main, strokeWidth: 2, stroke: '#fff' }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </NoSsr>
             </Box>
           </Paper>
         </Grid>
-        <Grid size={{ xs: 12, lg: 4 }}>
+        <Grid size={{ xs: 12, lg: 4 }} sx={{ minWidth: 0 }}>
           <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider', height: '100%' }}>
             <Typography variant="h6" sx={{ fontWeight: 800, mb: 4 }}>Booking Share</Typography>
-            <Box sx={{ height: 250, width: '100%' }}>
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie data={bookingData} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value">
-                    {bookingData.map((entry: any, index: number) => (
-                      <Cell key={index} fill={entry.color || ['#3b82f6', '#8b5cf6', '#ec489a', '#f97316'][index % 4]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: theme.shadows[4] }} />
-                </PieChart>
-              </ResponsiveContainer>
+            <Box sx={{ height: 250, width: '100%', minWidth: 0, minHeight: 0 }}>
+              <NoSsr fallback={<Skeleton variant="rounded" height={250} sx={{ borderRadius: 4 }} />}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie data={bookingData} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value">
+                      {bookingData.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: theme.shadows[4] }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </NoSsr>
             </Box>
             <Stack spacing={1.5} sx={{ mt: 2 }}>
-              {bookingData.map((item: any, i: number) => (
+              {bookingData.map((item, i) => (
                 <Stack key={i} direction="row" justifyContent="space-between" alignItems="center">
                   <Stack direction="row" spacing={1.5} alignItems="center">
-                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: item.color || ['#3b82f6', '#8b5cf6', '#ec489a', '#f97316'][i % 4] }} />
+                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: item.color }} />
                     <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>{item.name}</Typography>
                   </Stack>
                   <Typography variant="body2" sx={{ fontWeight: 800 }}>{item.value}%</Typography>
@@ -229,14 +241,14 @@ export default function AdminDashboardPage() {
 
       {/* Activity Grid */}
       <Grid container spacing={4}>
-        <Grid size={{ xs: 12, lg: 6 }}>
+      <Grid size={{ xs: 12, lg: 6 }}>
           <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
               <Typography variant="h6" sx={{ fontWeight: 800 }}>Recent Bookings</Typography>
               <Button size="small" endIcon={<Eye size={16} />} sx={{ fontWeight: 700 }}>View All</Button>
             </Stack>
             <Stack spacing={2}>
-              {recentBookings.map((booking: any, i: number) => (
+              {recentBookings.map((booking, i) => (
                 <Paper
                   key={i}
                   variant="outlined"
@@ -282,7 +294,7 @@ export default function AdminDashboardPage() {
               <IconButton size="small"><TrendingUp size={18} /></IconButton>
             </Stack>
             <Stack spacing={3}>
-              {upcomingTrips.map((trip: any, i: number) => {
+              {upcomingTrips.map((trip, i) => {
                 const total = Number(trip.bus?.total_seats || trip.total_seats || 0)
                 const available = Number(trip.available_seats ?? total)
                 const filled = Math.max(total - available, 0)

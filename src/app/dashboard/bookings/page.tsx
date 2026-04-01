@@ -1,19 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
-import {
-  Bus,
-  Calendar,
-  Clock,
-  Download,
-  FileText,
-  MapPin,
-  ArrowRight,
-  QrCode,
-  Ticket as TicketIcon,
-} from 'lucide-react'
+import { ArrowRight, Bus, Calendar, Clock, Download, FileText, QrCode, Ticket as TicketIcon } from 'lucide-react'
 import {
   Box,
   Typography,
@@ -23,57 +13,81 @@ import {
   Chip,
   alpha,
   useTheme,
-  Divider,
   Skeleton,
-  Fade,
   Grid,
   ToggleButtonGroup,
   ToggleButton,
+  Container,
 } from '@mui/material'
+import Navbar from '@/components/common/Navbar'
 
 import { getMyBookings } from '@/lib/api'
 
+type BookingStatusFilter = 'all' | 'confirmed' | 'cancelled' | 'upcoming'
+
+type DashboardBooking = {
+  id: string
+  booking_reference: string
+  trip_id: string
+  status: string
+  final_amount: number
+  created_at: string
+  trip?: {
+    departure_time?: string
+    route?: { origin?: string; destination?: string }
+    bus?: { name?: string }
+  }
+  booking_seats?: { seat_label: string }[]
+}
+
+function getHoursUntilDeparture(booking: DashboardBooking): number {
+  if (!booking.trip?.departure_time) return -1
+  return (new Date(booking.trip.departure_time).getTime() - Date.now()) / 36e5
+}
+
 export default function MyBookingsPage() {
-const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
-  const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'cancelled' | 'upcoming'>('all')
+  const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<BookingStatusFilter>('all')
   const theme = useTheme()
 
-  const { data: bookings = [], isLoading } = useQuery({
+  const { data: bookings = [], isLoading, refetch } = useQuery({
     queryKey: ['my-bookings', statusFilter],
-    queryFn: () => getMyBookings(),
+    queryFn: () => getMyBookings(statusFilter),
   })
 
-  const filteredBookings = bookings.filter((booking: any) => {
-    if (statusFilter === 'all') return true
-    if (statusFilter === 'confirmed') return booking.status === 'confirmed'
-    if (statusFilter === 'cancelled') return booking.status === 'cancelled'
-    if (statusFilter === 'upcoming') {
-      const hours = (new Date(booking.trip?.departure_time || 0).getTime() - Date.now()) / 36e5
-      return booking.status === 'confirmed' && hours > 0
-    }
-    return true
-  })
+  const typedBookings = bookings as DashboardBooking[]
 
-  const hoursUntilDeparture = (booking: any) => {
-    return (new Date(booking.trip?.departure_time || 0).getTime() - Date.now()) / 36e5
-  }
-
+  const filteredBookings = useMemo(() => {
+    return typedBookings.filter((booking) => {
+      if (statusFilter === 'all') return true
+      if (statusFilter === 'confirmed') return booking.status === 'confirmed'
+      if (statusFilter === 'cancelled') return booking.status === 'cancelled'
+      if (statusFilter === 'upcoming') {
+        const hours = getHoursUntilDeparture(booking)
+        return booking.status === 'confirmed' && hours > 0
+      }
+      return true
+    })
+  }, [statusFilter, typedBookings])
 
   return (
-    <Stack spacing={4}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Navbar />
+      <Container maxWidth="lg" sx={{ pt: { xs: 12, md: 16 }, pb: 8 }}>
+        <Stack spacing={4}>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: { sm: 'center' }, mb: 2 }}>
         <Box sx={{ flexGrow: 1 }}>
           <Typography variant="h3" sx={{ fontWeight: 900, mb: 0.5 }}>
             My Bookings
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            {filteredBookings.length} of {bookings.length} {statusFilter !== 'all' && `(${statusFilter})`} trips
+            {filteredBookings.length} of {typedBookings.length} trips
           </Typography>
         </Box>
         <ToggleButtonGroup
           value={statusFilter}
           exclusive
-          onChange={(_, v) => v && setStatusFilter(v as any)}
+          onChange={(_, value: BookingStatusFilter | null) => value && setStatusFilter(value)}
           size="small"
           sx={{ borderRadius: 3 }}
         >
@@ -84,19 +98,18 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
         </ToggleButtonGroup>
       </Box>
 
-
       {isLoading ? (
         <Stack spacing={3}>
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} variant="rectangular" height={160} sx={{ borderRadius: 6 }} />
+            <Skeleton key={i} variant="rectangular" height={160} sx={{ borderRadius: 1 }} />
           ))}
         </Stack>
-      ) : bookings.length === 0 ? (
+      ) : filteredBookings.length === 0 ? (
         <Paper
           elevation={0}
           sx={{
             p: 8,
-            borderRadius: 6,
+            borderRadius: 1,
             border: '2px dashed',
             borderColor: 'divider',
             textAlign: 'center',
@@ -116,45 +129,46 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
             <TicketIcon size={32} />
           </Box>
           <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-            No bookings found yet
+            No bookings found
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            Ready for your next adventure? Let's find you a ride.
+            Search trips and complete your first booking.
           </Typography>
-          <Button variant="contained" size="large" sx={{ borderRadius: 4, px: 4 }}>
+          <Button variant="contained" size="large" sx={{ borderRadius: 4, px: 4 }} href="/search">
             Book a Bus
           </Button>
         </Paper>
       ) : (
         <Stack spacing={3}>
-          {bookings.map((booking) => {
+          {filteredBookings.map((booking) => {
             const isConfirmed = booking.status === 'confirmed'
-            const departureHours = hoursUntilDeparture(booking)
+            const departureHours = getHoursUntilDeparture(booking)
+            const timeColor =
+              departureHours > 24 ? 'text.primary' : departureHours > 2 ? 'warning.main' : 'error.main'
+            const timeWeight = departureHours > 24 ? 600 : departureHours > 2 ? 700 : 900
             const qrPayload = JSON.stringify({
               id: booking.booking_reference,
               trip_id: booking.trip_id,
               seats: booking.booking_seats?.map((seat) => seat.seat_label) || [],
             })
 
-
             return (
               <Paper
                 key={booking.id}
                 elevation={selectedTicket === booking.id ? 8 : 0}
                 sx={{
-                  borderRadius: 6,
+                  borderRadius: 1,
                   border: '1px solid',
                   borderColor: selectedTicket === booking.id ? 'primary.main' : 'divider',
                   bgcolor: 'background.paper',
                   overflow: 'hidden',
-                  transition: 'all 0.4s ease',
+                  transition: 'all 0.3s ease',
                   '&:hover': {
                     borderColor: 'primary.main',
                     boxShadow: theme.shadows[4],
                   },
                 }}
               >
-                {/* Booking Header */}
                 <Box
                   sx={{
                     px: 3,
@@ -185,11 +199,10 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
                     </Typography>
                   </Stack>
                   <Typography variant="caption" color="text.secondary">
-                    Booked on: {new Date(booking.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    Booked on {new Date(booking.created_at).toLocaleDateString('en-IN')}
                   </Typography>
                 </Box>
 
-                {/* Booking Content */}
                 <Box sx={{ p: { xs: 3, md: 4 } }}>
                   <Grid container spacing={3} alignItems="center">
                     <Grid size={{ xs: 12, lg: 8 }}>
@@ -197,7 +210,7 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
                         <Box
                           sx={{
                             p: 2,
-                            borderRadius: 4,
+                            borderRadius: 1,
                             bgcolor: alpha(theme.palette.primary.main, 0.1),
                             color: 'primary.main',
                           }}
@@ -207,15 +220,15 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
                         <Box sx={{ flex: 1 }}>
                           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                             <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                              {booking.trip?.route?.origin}
+                              {booking.trip?.route?.origin || 'N/A'}
                             </Typography>
                             <ArrowRight size={20} style={{ color: theme.palette.text.secondary }} />
                             <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                              {booking.trip?.route?.destination}
+                              {booking.trip?.route?.destination || 'N/A'}
                             </Typography>
                           </Stack>
                           <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 700, mb: 2 }}>
-                            {booking.trip?.bus?.name}
+                            {booking.trip?.bus?.name || 'Bus Not Available'}
                           </Typography>
 
                           <Grid container spacing={2}>
@@ -226,7 +239,7 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
                                 </Typography>
                                 <Stack direction="row" spacing={1} alignItems="center">
                                   <Calendar size={14} color={theme.palette.text.secondary} />
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                     {booking.trip?.departure_time
                                       ? new Date(booking.trip.departure_time).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
                                       : 'TBD'}
@@ -239,13 +252,9 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
                                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                   Time to Departure
                                 </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: `${hoursUntilDeparture > 24 ? '600' : hoursUntilDeparture > 2 ? '700' : '900'}`, color: `${hoursUntilDeparture > 24 ? 'text.primary' : hoursUntilDeparture > 2 ? 'warning.main' : 'error.main'}` }}>
-                                  {hoursUntilDeparture > 0 ? `${Math.round(hoursUntilDeparture)}h` : 'Departed'}
+                                <Typography variant="body2" sx={{ fontWeight: timeWeight, color: timeColor }}>
+                                  {departureHours > 0 ? `${Math.round(departureHours)}h` : 'Departed'}
                                 </Typography>
-                              </Stack>
-                            </Grid>
-
-                                </Stack>
                               </Stack>
                             </Grid>
                             <Grid size={{ xs: 6, sm: 4 }}>
@@ -266,7 +275,7 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
                             <Grid size={{ xs: 12, sm: 4 }}>
                               <Stack spacing={0.5}>
                                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                  Seats Booked
+                                  Seats
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 700, color: 'secondary.main' }}>
                                   {booking.booking_seats?.map((seat) => seat.seat_label).join(', ') || 'N/A'}
@@ -292,10 +301,10 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
                       >
                         <Box sx={{ textAlign: { lg: 'right' } }}>
                           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                            Total Amount Paid
+                            Total Amount
                           </Typography>
                           <Typography variant="h4" sx={{ fontWeight: 900, color: 'primary.main' }}>
-                            ₹{Number(booking.final_amount).toLocaleString()}
+                            ₹{Number(booking.final_amount || 0).toLocaleString()}
                           </Typography>
                         </Box>
                         <Stack direction="row" spacing={1}>
@@ -316,17 +325,18 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
                               color="error"
                               size="small"
                               onClick={async () => {
-                                if (confirm(`Cancel booking ${booking.booking_reference}?`)) {
-                                  const res = await fetch(`/api/bookings/${booking.id}`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ reason: 'Customer request' })
-                                  })
-                                  if (res.ok) {
-                                    window.location.reload()
-                                  } else {
-                                    alert('Cancellation failed')
-                                  }
+                                const ok = window.confirm(`Cancel booking ${booking.booking_reference}?`)
+                                if (!ok) return
+
+                                const res = await fetch(`/api/bookings/${booking.id}`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ reason: 'Customer request' }),
+                                })
+                                if (res.ok) {
+                                  await refetch()
+                                } else {
+                                  window.alert('Cancellation failed')
                                 }
                               }}
                               sx={{ borderRadius: 3 }}
@@ -334,15 +344,12 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
                               Cancel
                             </Button>
                           )}
-
                         </Stack>
-
                       </Stack>
                     </Grid>
                   </Grid>
                 </Box>
 
-                {/* E-Ticket Display */}
                 {selectedTicket === booking.id && (
                   <Fade in={selectedTicket === booking.id}>
                     <Box
@@ -359,7 +366,7 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
                             elevation={4}
                             sx={{
                               p: 2.5,
-                              borderRadius: 4,
+                              borderRadius: 1,
                               bgcolor: 'white',
                               display: 'flex',
                               flexDirection: 'column',
@@ -381,23 +388,14 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
                                 Digital Ticket Ready
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                Please show this QR code to the conductor upon boarding. No printed copy is required.
-                                Ensure your phone is sufficiently charged.
+                                Show this QR at boarding. A printed copy is optional.
                               </Typography>
                             </Box>
                             <Stack direction="row" spacing={2} justifyContent={{ xs: 'center', md: 'flex-start' }}>
-                              <Button
-                                size="small"
-                                startIcon={<Download size={16} />}
-                                sx={{ color: 'primary.main', fontWeight: 700 }}
-                              >
+                              <Button size="small" startIcon={<Download size={16} />} sx={{ color: 'primary.main', fontWeight: 700 }}>
                                 Download PDF
                               </Button>
-                              <Button
-                                size="small"
-                                startIcon={<FileText size={16} />}
-                                sx={{ color: 'text.secondary', fontWeight: 600 }}
-                              >
+                              <Button size="small" startIcon={<FileText size={16} />} sx={{ color: 'text.secondary', fontWeight: 600 }}>
                                 Email Receipt
                               </Button>
                             </Stack>
@@ -412,6 +410,8 @@ const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
           })}
         </Stack>
       )}
-    </Stack>
+      </Stack>
+      </Container>
+    </Box>
   )
 }

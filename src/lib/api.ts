@@ -1,4 +1,5 @@
 import type {
+    AdminUpcomingTrip,
     Booking,
     BookingSeat,
     Bus,
@@ -30,7 +31,7 @@ export async function getCurrentProfile() {
             id: user.id,
             email: user.email,
             full_name: user.email?.split('@')[0] || 'User',
-            role: 'customer' as any,
+            role: 'customer' as Profile['role'],
         }
     }
 
@@ -117,26 +118,35 @@ export async function lockSeats(input: {
     sessionId: string
     durationMinutes?: number
 }): Promise<{ locked_seats: string[]; failed_seats: string[] }> {
-    const supabase = createClient()
-    const { data, error } = await supabase.rpc('lock_seats' as never, {
-        p_trip_id: input.tripId,
-        p_seat_labels: input.seatLabels,
-        p_session_id: input.sessionId,
-        p_duration_minutes: input.durationMinutes ?? 5,
-    } as never)
-    if (error) throw error
-    return (data?.[0] as { locked_seats: string[]; failed_seats: string[] }) || { locked_seats: [], failed_seats: [] }
+    const res = await fetch(`/api/trips/${input.tripId}/locks`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            seatLabels: input.seatLabels,
+            sessionId: input.sessionId,
+            durationMinutes: input.durationMinutes ?? 5,
+        }),
+    })
+
+    const data = await res.json().catch(() => null)
+    if (!res.ok) throw new Error(data?.message || 'Failed to lock seats')
+    return (data as { locked_seats: string[]; failed_seats: string[] }) || { locked_seats: [], failed_seats: [] }
 }
 export async function unlockSeat(tripId: string, seatLabel: string, sessionId: string) {
-    const supabase = createClient()
-    const { error } = await supabase
-        .from('seat_locks')
-        .delete()
-        .eq('trip_id', tripId)
-        .eq('seat_label', seatLabel)
-        .eq('session_id', sessionId)
-        
-    if (error) throw error
+    const res = await fetch(`/api/trips/${tripId}/locks`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ seatLabel, sessionId }),
+    })
+
+    if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.message || 'Failed to unlock seat')
+    }
 }
 
 export async function getMyBookings(statusFilter?: string) {
@@ -201,7 +211,7 @@ export async function getAdminTrips() {
         `)
         .order('departure_time', { ascending: true })
     if (error) throw error
-    return (data || []) as Trip[]
+    return (data || []) as AdminUpcomingTrip[]
 }
 
 export async function getSeatLayouts() {

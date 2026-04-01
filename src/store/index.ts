@@ -35,7 +35,12 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     selectedSeats: [],
     lockedSeats: [],
     sessionId: '',
-    setTripId: (tripId) => set({ tripId, selectedSeats: [] }),
+    setTripId: (tripId) =>
+        set((state) => (
+            state.tripId === tripId
+                ? { tripId }
+                : { tripId, selectedSeats: [], lockedSeats: [] }
+        )),
     toggleSeat: (seat) =>
         set((state) => {
             const exists = state.selectedSeats.find((s) => s.label === seat.label)
@@ -52,3 +57,21 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     setSessionId: (sessionId) => set({ sessionId }),
     isSeatLocked: (seatLabel) => get().lockedSeats.includes(seatLabel),
 }))
+
+// Theme Store
+interface ThemeState {
+    mode: 'light' | 'dark'
+    toggleMode: () => void
+    setMode: (mode: 'light' | 'dark') => void
+}
+
+export const useThemeStore = create<ThemeState>()(
+    persist(
+        (set) => ({
+            mode: 'light',
+            toggleMode: () => set((state) => ({ mode: state.mode === 'light' ? 'dark' : 'light' })),
+            setMode: (mode) => set({ mode }),
+        }),
+        { name: 'theme-store' }
+    )
+)

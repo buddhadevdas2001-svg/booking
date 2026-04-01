@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { calculateDynamicPrice } from '@/lib/pricing_engine'
 
 export async function POST(
   request: NextRequest,
@@ -10,7 +9,7 @@ export async function POST(
   const body = await request.json()
   const { reason, refund_requested } = body
 
-  const supabase = createClient()
+  const supabase = await createClient()
 
   // Get booking with trip details
   const { data: booking, error: fetchError } = await supabase

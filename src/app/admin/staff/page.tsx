@@ -16,6 +16,8 @@ import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 import type { Staff } from '@/types/supabase'
 
+type ChipColor = 'default' | 'primary' | 'secondary' | 'success' | 'error' | 'info' | 'warning'
+
 type StaffWithProfile = Staff & {
   user?: {
     id: string
@@ -25,7 +27,7 @@ type StaffWithProfile = Staff & {
   } | null
 }
 
-const ROLE_CONFIG: Record<string, { label: string; color: 'primary' | 'success' | 'warning' | 'secondary' | 'error' }> = {
+const ROLE_CONFIG: Record<string, { label: string; color: ChipColor }> = {
   driver: { label: 'Driver', color: 'primary' },
   conductor: { label: 'Conductor', color: 'success' },
   admin: { label: 'Admin', color: 'warning' },
@@ -42,24 +44,22 @@ export default function AdminStaffPage() {
   const { data: staff = [], isLoading, isFetching, refetch } = useQuery<StaffWithProfile[]>({
     queryKey: ['staff'],
     queryFn: async () => {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('staff')
-        .select(`
-          *,
-          user:profiles(id, full_name, phone, avatar_url)
-        `)
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return (data || []) as StaffWithProfile[]
+      const res = await fetch('/api/admin/staff')
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Failed to load staff')
+      }
+      return (await res.json()) as StaffWithProfile[]
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const supabase = createClient()
-      const { error } = await supabase.from('staff').delete().eq('id', id)
-      if (error) throw error
+      const res = await fetch(`/api/admin/staff/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Failed to delete staff')
+      }
     },
     onSuccess: () => {
       toast.success('Staff member removed successfully')
@@ -111,15 +111,13 @@ export default function AdminStaffPage() {
                 '&:hover': { transform: 'translateY(-4px)', boxShadow: theme.shadows[6], borderColor: `${stat.color}.main` },
               }}
             >
-              <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                <Box>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'text.secondary' }}>
-                    {stat.label}
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>{stat.value}</Typography>
-                </Box>
+              <Stack direction="row" spacing={2} alignItems="center">
                 <Box sx={{ p: 1.5, borderRadius: 3, bgcolor: alpha(theme.palette[stat.color]?.main || theme.palette.primary.main, 0.1), color: `${stat.color}.main` }}>
                   <stat.icon size={22} />
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{stat.label}</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>{stat.value}</Typography>
                 </Box>
               </Stack>
             </Paper>
@@ -183,14 +181,14 @@ export default function AdminStaffPage() {
       {/* Staff Grid */}
       <Grid container spacing={3}>
         {isLoading
-          ? Array.from({ length: 6 }).map((_, i) => (
+            ? Array.from({ length: 6 }).map((_, i) => (
               <Grid key={i} size={{ xs: 12, sm: 6, lg: 4 }}>
                 <Skeleton variant="rounded" height={220} sx={{ borderRadius: 6 }} />
               </Grid>
             ))
           : filtered.length === 0
           ? (
-            <Grid size={12}>
+            <Grid size={{ xs: 12 }}>
               <Paper elevation={0} sx={{ p: 8, textAlign: 'center', borderRadius: 6, border: '2px dashed', borderColor: 'divider' }}>
                 <Users size={48} style={{ color: theme.palette.text.disabled, marginBottom: 16 }} />
                 <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
@@ -202,11 +200,11 @@ export default function AdminStaffPage() {
               </Paper>
             </Grid>
           )
-          : filtered.map((member) => {
-              const roleConf = ROLE_CONFIG[member.staff_type || ''] ?? { label: member.staff_type, color: 'default' as any }
+                : filtered.map((member) => {
+              const roleConf = ROLE_CONFIG[member.staff_type || ''] ?? { label: member.staff_type, color: 'default' as ChipColor }
               const initials = (member.user?.full_name || 'S').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
-              return (
+                return (
                 <Grid key={member.id} size={{ xs: 12, sm: 6, lg: 4 }}>
                   <Paper
                     elevation={0}
@@ -302,7 +300,7 @@ export default function AdminStaffPage() {
                     <Stack direction="row" spacing={1.5} sx={{ mt: 3 }}>
                       <Chip
                         label={roleConf.label}
-                        color={roleConf.color as any}
+                        color={roleConf.color}
                         size="small"
                         sx={{ fontWeight: 800, fontSize: '0.7rem' }}
                       />

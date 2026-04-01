@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAdminRequest } from '@/lib/admin-auth'
+
+type BookingMetricRow = {
+    final_amount: number | null
+    status: string | null
+}
 
 export async function GET() {
+    const auth = await requireAdminRequest()
+    if (!auth.ok) return auth.response
     const supabase = createAdminClient()
 
     const [bookingsRes, busesRes, usersRes, bookingsListRes, tripsRes] = await Promise.all([
@@ -27,7 +35,7 @@ export async function GET() {
     if (bookingsListRes.error) return NextResponse.json({ message: bookingsListRes.error.message }, { status: 500 })
     if (tripsRes.error) return NextResponse.json({ message: tripsRes.error.message }, { status: 500 })
 
-    const bookings = (bookingsRes.data || []) as any[]
+    const bookings = (bookingsRes.data || []) as BookingMetricRow[]
     const totalRevenue = bookings.reduce((sum, b) => sum + Number(b.final_amount || 0), 0)
     const totalBookings = bookings.length
     const confirmedBookings = bookings.filter((b) => b.status === 'confirmed').length

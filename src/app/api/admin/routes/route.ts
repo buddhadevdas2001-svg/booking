@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAdminRequest } from '@/lib/admin-auth'
 
 export async function GET() {
+    const auth = await requireAdminRequest()
+    if (!auth.ok) return auth.response
     try {
         const supabase = createAdminClient()
         const { data, error } = await supabase.from('routes').select('*').order('origin')
@@ -14,6 +17,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+    const auth = await requireAdminRequest()
+    if (!auth.ok) return auth.response
     try {
         const payload = await req.json()
         const supabase = createAdminClient()

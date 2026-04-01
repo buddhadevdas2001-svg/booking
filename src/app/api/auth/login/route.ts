@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(req: NextRequest) {
     try {
         const { email, password } = await req.json()
-        const supabase = createAdminClient()
+        const supabase = await createClient()
 
-        // 1. Authenticate the user securely via admin (or regular) but we need to return the profile
-        // Actually for login we want to use the standard auth but the profile part is what usually fails.
-        // Let's use a standard client but ensure we return the profile data too.
-        
         const { data: { user }, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
         if (loginError) throw loginError
         if (!user) throw new Error('Login failed')
 
-        // 2. Fetch the profile using admin client to bypass RLS
         const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
@@ -22,9 +18,9 @@ export async function POST(req: NextRequest) {
             .single()
 
         if (profileError) {
-            // Profile missing? Create a default one
             console.warn('Profile missing for user, creating default', user.id)
-            const { data: newProfile } = await supabase
+            const adminSupabase = createAdminClient()
+            const { data: newProfile } = await adminSupabase
                 .from('profiles')
                 .insert({ id: user.id, full_name: user.user_metadata?.full_name || 'User', role: 'customer' })
                 .select()

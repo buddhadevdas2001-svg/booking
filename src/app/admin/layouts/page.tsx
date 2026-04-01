@@ -5,12 +5,16 @@ import { Plus, Search, Bus as BusIcon, LayoutGrid, Trash2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
-import type { SeatLayout } from '@/types/supabase'
+import type { SeatLayout, SeatLayoutData } from '@/types/supabase'
 
 type LayoutListItem = SeatLayout & {
     buses?: {
         name?: string
     } | null
+}
+
+type SeatLayoutApiRow = Omit<LayoutListItem, 'layout_data'> & {
+    layout_data: SeatLayoutData | string
 }
 
 export default function SeatLayoutsPage() {
@@ -24,7 +28,7 @@ export default function SeatLayoutsPage() {
             const data = await res.json()
             
             // Ensure layout_data is parsed if it comes as a string (Supabase safety)
-            return (data || []).map((l: any) => ({
+            return ((data || []) as SeatLayoutApiRow[]).map((l) => ({
                 ...l,
                 layout_data: typeof l.layout_data === 'string' ? JSON.parse(l.layout_data) : l.layout_data
             })) as LayoutListItem[]

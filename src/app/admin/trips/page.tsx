@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Plus, MapPin, Users, Bus, Zap } from 'lucide-react'
 import { calculateDynamicPrice } from '@/lib/pricing_engine'
+import type { AdminUpcomingTrip } from '@/types/supabase'
 import {
   Box,
   Typography,
@@ -26,7 +27,7 @@ import {
 
 export default function AdminTripsPage() {
   const theme = useTheme()
-  const { data: trips = [], isLoading } = useQuery({
+  const { data: trips = [], isLoading } = useQuery<AdminUpcomingTrip[]>({
     queryKey: ['admin-trips'],
     queryFn: async () => {
       const res = await fetch('/api/admin/trips')
@@ -83,7 +84,7 @@ export default function AdminTripsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              trips.map((trip: any) => {
+              trips.map((trip) => {
                 const dep = trip.departure_time ? new Date(trip.departure_time) : null
                 const arr = trip.arrival_time ? new Date(trip.arrival_time) : null
                 const pricing = dep ? calculateDynamicPrice({

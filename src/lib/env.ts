@@ -13,7 +13,7 @@ export function getRequiredPublicSupabaseEnv() {
 }
 
 export function getServiceRoleKey() {
-    const key = getEnvValue('SUPABASE_SERVICE_ROLE_KEY')
+    const key = getEnvValue('SUPABASE_SERVICE_ROLE_KEY') || getEnvValue('SUPABASE_SECRET_KEY')
     if (!key) {
         throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
     }

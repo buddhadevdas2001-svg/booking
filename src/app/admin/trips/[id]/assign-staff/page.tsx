@@ -11,6 +11,29 @@ import {
     Shield, Award, Plus, Trash2, CheckCircle2
 } from 'lucide-react'
 
+type TripDetails = {
+    id: string
+    departure_time: string
+    route?: { origin?: string; destination?: string }
+}
+
+type TripStaffMember = {
+    id: string
+    staff_id: string
+    role: 'driver' | 'conductor' | string
+    staff?: {
+        employee_id?: string
+        user?: { full_name?: string }
+    }
+}
+
+type StaffMember = {
+    id: string
+    staff_type: 'driver' | 'conductor' | string
+    employee_id?: string
+    user?: { full_name?: string; phone?: string }
+}
+
 export default function AssignStaffPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router = useRouter()
@@ -28,11 +51,11 @@ export default function AssignStaffPage({ params }: { params: Promise<{ id: stri
                 .eq('id', id)
                 .single()
             if (error) throw error
-            return data
+            return data as unknown as TripDetails
         }
     })
 
-    const { data: tripStaff = [], isLoading: tripStaffLoading } = useQuery({
+    const { data: tripStaff = [], isLoading: tripStaffLoading } = useQuery<TripStaffMember[]>({
         queryKey: ['trip-staff', id],
         queryFn: async () => {
             const supabase = createClient()
@@ -41,20 +64,17 @@ export default function AssignStaffPage({ params }: { params: Promise<{ id: stri
                 .select('*, staff:staff(*, user:profiles(full_name))')
                 .eq('trip_id', id)
             if (error) throw error
-            return data
+            return (data || []) as unknown as TripStaffMember[]
         }
     })
 
-    const { data: availableStaff = [], isLoading: staffLoading } = useQuery({
+    const { data: availableStaff = [], isLoading: staffLoading } = useQuery<StaffMember[]>({
         queryKey: ['available-staff'],
         queryFn: async () => {
-            const supabase = createClient()
-            const { data, error } = await supabase
-                .from('staff')
-                .select('*, user:profiles(full_name, phone)')
-                .eq('is_active', true)
-            if (error) throw error
-            return data
+            const res = await fetch('/api/admin/staff')
+            if (!res.ok) throw new Error('Failed to fetch available staff')
+            const allStaff = (await res.json()) as StaffMember[]
+            return allStaff.filter(s => s.is_active !== false)
         }
     })
 
@@ -65,14 +85,14 @@ export default function AssignStaffPage({ params }: { params: Promise<{ id: stri
                 trip_id: id,
                 staff_id: staffId,
                 role: selectedRole
-            })
+            } as never)
             if (error) throw error
         },
         onSuccess: () => {
             toast.success('Staff assigned successfully')
             queryClient.invalidateQueries({ queryKey: ['trip-staff', id] })
         },
-        onError: (err: any) => toast.error(err.message || 'Failed to assign staff')
+        onError: (err: unknown) => toast.error(err instanceof Error ? err.message : 'Failed to assign staff')
     })
 
     const removeMutation = useMutation({
@@ -85,12 +105,12 @@ export default function AssignStaffPage({ params }: { params: Promise<{ id: stri
             toast.success('Staff removed from trip')
             queryClient.invalidateQueries({ queryKey: ['trip-staff', id] })
         },
-        onError: (err: any) => toast.error(err.message || 'Failed to remove staff')
+        onError: (err: unknown) => toast.error(err instanceof Error ? err.message : 'Failed to remove staff')
     })
 
-    const filteredStaff = availableStaff.filter((s: any) => 
+    const filteredStaff = availableStaff.filter((s) => 
         s.staff_type === selectedRole && 
-        !tripStaff.some((ts: any) => ts.staff_id === s.id) &&
+        !tripStaff.some((ts) => ts.staff_id === s.id) &&
         (s.user?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
          s.employee_id?.toLowerCase().includes(searchTerm.toLowerCase()))
     )
@@ -129,7 +149,7 @@ export default function AssignStaffPage({ params }: { params: Promise<{ id: stri
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {tripStaff.map((ts: any) => (
+                            {tripStaff.map((ts) => (
                                 <div key={ts.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-700 bg-slate-800/50">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${ts.role === 'driver' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
@@ -188,7 +208,7 @@ export default function AssignStaffPage({ params }: { params: Promise<{ id: stri
                             <div className="p-4 text-center text-slate-500 text-sm">
                                 No available {selectedRole}s found.
                             </div>
-                        ) : filteredStaff.map((staff: any) => (
+                        ) : filteredStaff.map((staff) => (
                             <div key={staff.id} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-700 hover:border-slate-500 transition-colors">
                                 <div>
                                     <p className="font-bold text-white text-sm">{staff.user?.full_name}</p>

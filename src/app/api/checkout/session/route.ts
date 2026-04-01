@@ -1,10 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { BookingSeat } from '@/types/supabase'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-01-27.acacia',
+    apiVersion: '2026-03-25.dahlia',
 })
+
+type CheckoutBooking = {
+    id: string
+    trip_id: string
+    user_id: string
+    final_amount: number
+    trip: {
+        route: {
+            origin: string
+            destination: string
+        }
+        bus: {
+            name: string
+        }
+    }
+    booking_seats: Pick<BookingSeat, 'seat_label'>[]
+}
 
 export async function POST(req: NextRequest) {
     try {
@@ -35,6 +53,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: 'Booking not found' }, { status: 404 })
         }
 
+        const bookingData = booking as CheckoutBooking
+
         // Create Stripe Checkout Session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -43,23 +63,31 @@ export async function POST(req: NextRequest) {
                     price_data: {
                         currency: 'inr',
                         product_data: {
-                            name: `Bus Ticket: ${booking.trip.route.origin} to ${booking.trip.route.destination}`,
-                            description: `Seat(s): ${booking.booking_seats.map((s: any) => s.seat_label).join(', ')} | Bus: ${booking.trip.bus.name}`,
+                            name: `Bus Ticket: ${bookingData.trip.route.origin} to ${bookingData.trip.route.destination}`,
+                            description: `Seat(s): ${bookingData.booking_seats.map((seat) => seat.seat_label).join(', ')} | Bus: ${bookingData.trip.bus.name}`,
                         },
-                        unit_amount: Math.round(Number(booking.final_amount) * 100), // Stripe expects amounts in cents/paise
+                        unit_amount: Math.round(Number(bookingData.final_amount) * 100), // Stripe expects amounts in cents/paise
                     },
                     quantity: 1,
                 },
             ],
             mode: 'payment',
             success_url: `${process.env.NEXT_PUBLIC_APP_URL}/booking/success?booking_id=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/${booking.trip_id}`,
+            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/${bookingData.trip_id}`,
             metadata: {
-                bookingId: booking.id,
-                tripId: booking.trip_id,
-                userId: booking.user_id,
+                bookingId: bookingData.id,
+                tripId: bookingData.trip_id,
+                userId: bookingData.user_id,
             },
         })
+
+        await supabase
+            .from('bookings')
+            .update({
+                stripe_session_id: session.id,
+                updated_at: new Date().toISOString(),
+            } as never)
+            .eq('id', bookingId)
 
         return NextResponse.json({ sessionId: session.id })
     } catch (err) {

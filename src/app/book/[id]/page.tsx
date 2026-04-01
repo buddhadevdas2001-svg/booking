@@ -52,7 +52,7 @@ export default function SeatSelectionPage({ params }: { params: Promise<{ id: st
   const searchParams = useSearchParams()
   const passengerCount = parseInt(searchParams.get('passengers') || '1')
   const { user } = useAuthStore()
-  const { selectedSeats, toggleSeat, clearSeats, setLockedSeats, setSessionId, sessionId, setTripId } = useBookingStore()
+  const { tripId: activeTripId, selectedSeats, toggleSeat, clearSeats, setLockedSeats, setSessionId, sessionId, setTripId } = useBookingStore()
   const [selectedDeck, setSelectedDeck] = useState<'lower' | 'upper'>('lower')
 
   const { data: trip, isLoading: tripLoading } = useQuery<SearchTrip>({
@@ -67,10 +67,12 @@ export default function SeatSelectionPage({ params }: { params: Promise<{ id: st
   })
 
   useEffect(() => {
+    if (activeTripId && activeTripId !== id) {
+      clearSeats()
+    }
     setTripId(id)
     if (!sessionId) setSessionId(globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`)
-    return () => clearSeats()
-  }, [clearSeats, id, sessionId, setSessionId, setTripId])
+  }, [activeTripId, clearSeats, id, sessionId, setSessionId, setTripId])
 
   useRealtimeSeats(id)
 
@@ -102,7 +104,7 @@ export default function SeatSelectionPage({ params }: { params: Promise<{ id: st
 
   const calculateTotal = () => {
     return selectedSeats.reduce((acc, seat) => {
-      const seatMultiplier = (seat as any).price_multiplier || 1.0
+      const seatMultiplier = seat.price_multiplier ?? 1.0
       const seatResult = trip ? calculateDynamicPrice({
         base_price: Number(trip.base_price) || 0,
         departure_time: trip.departure_time,

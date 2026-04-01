@@ -4,8 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export async function GET() {
     try {
         const supabase = createAdminClient()
-        console.log('Fetching offers from Supabase...')
-        
+
         // Try 'offers' first
         let result = await supabase
             .from('offers')

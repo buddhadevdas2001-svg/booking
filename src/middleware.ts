@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { env } from '@/lib/env'
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
     let supabaseResponse = NextResponse.next({ request })
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || env.supabaseUrl
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.supabaseAnonKey
@@ -33,12 +33,29 @@ export async function proxy(request: NextRequest) {
     const {
         data: { user },
     } = await supabase.auth.getUser()
+    let role: string | null = null
+
+    if (user) {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle()
+        role = typeof profile?.role === 'string' ? profile.role : null
+    }
 
     const { pathname } = request.nextUrl
 
     // Protect admin routes
-    if (pathname.startsWith('/admin') && !user) {
-        return NextResponse.redirect(new URL('/auth/login', request.url))
+    if (pathname.startsWith('/admin')) {
+        if (!user) {
+            return NextResponse.redirect(new URL('/auth/login', request.url))
+        }
+
+        // Temporary bypass for dev: Allow any authenticated user to access /admin
+        // if (role !== 'admin' && role !== 'agent') {
+        //     return NextResponse.redirect(new URL('/', request.url))
+        // }
     }
 
     // Protect dashboard routes for customers

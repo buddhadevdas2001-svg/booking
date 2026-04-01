@@ -35,14 +35,15 @@ export async function POST(req: NextRequest) {
             message: 'User created successfully',
             user: { id: data.user.id, email: data.user.email }
         })
-    } catch (err: any) {
+    } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error('Registration failed')
         console.error('Registration API Error (Detailed):', {
-            message: err.message,
-            stack: err.stack,
+            message: error.message,
+            stack: error.stack,
             error: err
         })
         return NextResponse.json(
-            { message: err instanceof Error ? err.message : 'Registration failed' },
+            { message: error.message },
             { status: 500 }
         )
     }

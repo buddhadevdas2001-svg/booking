@@ -16,6 +16,9 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Sun,
+  Moon,
+  Tag,
 } from 'lucide-react'
 import {
   Box,
@@ -31,10 +34,13 @@ import {
   alpha,
   useTheme,
   Tooltip,
+  Stack,
 } from '@mui/material'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/store'
 import toast from 'react-hot-toast'
+import Brand from '@/components/common/Brand'
+import { useThemeStore } from '@/store'
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutGrid, exact: true },
@@ -45,6 +51,7 @@ const navItems = [
   { href: '/admin/bookings', label: 'Bookings', icon: Ticket },
   { href: '/admin/payments', label: 'Payments', icon: CreditCard },
   { href: '/admin/staff', label: 'Staff', icon: Users },
+  { href: '/admin/coupons', label: 'Coupons', icon: Tag },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
@@ -66,6 +73,7 @@ export default function AdminSidebar({
   const pathname = usePathname()
   const router = useRouter()
   const { user, setUser } = useAuthStore()
+  const { mode, toggleMode } = useThemeStore()
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -81,33 +89,31 @@ export default function AdminSidebar({
   const sidebarContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
       {/* Brand */}
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, minHeight: 80 }}>
-        <Box sx={{
-          width: 44,
-          height: 44,
-          borderRadius: 3,
-          bgcolor: 'primary.main',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.2)}`,
-          backgroundImage: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`
-        }}>
-          <Bus size={20} color="white" />
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ 
+        p: '24px 16px', 
+        minHeight: 88,
+        gap: 2
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Brand 
+            compact 
+            iconOnly={collapsed} 
+            href="/admin" 
+          />
+          {!collapsed && (
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 900, lineHeight: 1.2 }}>Voyatra Admin</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>Management</Typography>
+            </Box>
+          )}
         </Box>
-        {!collapsed && (
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 900, lineHeight: 1.2 }}>Voyatra Admin</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>Management</Typography>
-          </Box>
-        )}
+        
         {mobileOpen && (
-          <IconButton onClick={onCloseMobile} sx={{ ml: 'auto', display: { lg: 'none' } }}>
+          <IconButton onClick={onCloseMobile} sx={{ display: { lg: 'none' } }}>
             <X size={20} />
           </IconButton>
         )}
-      </Box>
+      </Stack>
 
       <Divider sx={{ mx: 2, opacity: 0.5 }} />
 
@@ -180,6 +186,30 @@ export default function AdminSidebar({
             {user?.email?.split('@')[0] || 'Admin'}
           </Typography>
         </Box>
+
+        <Divider sx={{ mx: 2, my: 1, opacity: 0.5 }} />
+
+        <ListItemButton
+          onClick={toggleMode}
+          sx={{
+            borderRadius: 3,
+            py: 1.5,
+            mb: 0.5,
+            color: 'text.secondary',
+            '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08), color: 'primary.main' }
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: collapsed ? 0 : 40, color: 'inherit', justifyContent: 'center' }}>
+            {mode === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </ListItemIcon>
+          {!collapsed && (
+            <ListItemText
+              primary={mode === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              primaryTypographyProps={{ variant: 'body2', fontWeight: 800 }}
+            />
+          )}
+        </ListItemButton>
+
         <ListItemButton
           onClick={handleLogout}
           sx={{

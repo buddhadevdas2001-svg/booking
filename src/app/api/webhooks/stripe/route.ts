@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { BookingStatus, PaymentStatus } from '@/types/supabase'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-01-27.acacia',
+    apiVersion: '2026-03-25.dahlia',
 })
 
 // Note: You need to set 'STRIPE_WEBHOOK_SECRET' in your .env after finding it in Stripe Dashboard (using 'stripe-cli' in development)
@@ -22,9 +23,10 @@ export async function POST(req: NextRequest) {
         let event: Stripe.Event
         try {
             event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
-        } catch (err: any) {
-            console.error('Webhook signature verification failed:', err.message)
-            return NextResponse.json({ message: `Webhook Error: ${err.message}` }, { status: 400 })
+        } catch (err: unknown) {
+            const error = err instanceof Error ? err : new Error('Webhook signature verification failed')
+            console.error('Webhook signature verification failed:', error.message)
+            return NextResponse.json({ message: `Webhook Error: ${error.message}` }, { status: 400 })
         }
 
         const supabase = createAdminClient()
@@ -36,13 +38,14 @@ export async function POST(req: NextRequest) {
                 const bookingId = session.metadata?.bookingId
                 
                 if (bookingId) {
+                    const updatePayload: { status: BookingStatus; payment_status: PaymentStatus; updated_at: string } = {
+                        status: 'confirmed',
+                        payment_status: 'succeeded',
+                        updated_at: new Date().toISOString()
+                    }
                     const { error: updateError } = await supabase
                         .from('bookings')
-                        .update({
-                            status: 'confirmed' as any,
-                            payment_status: 'succeeded' as any,
-                            updated_at: new Date().toISOString()
-                        } as never)
+                        .update(updatePayload as never)
                         .eq('id', bookingId)
 
                     if (updateError) {
@@ -55,17 +58,20 @@ export async function POST(req: NextRequest) {
             }
             case 'checkout.session.expired':
             case 'payment_intent.payment_failed': {
-                const intent = event.data.object as Stripe.PaymentIntent
-                const bookingId = intent.metadata?.bookingId
+                const bookingId =
+                    event.type === 'checkout.session.expired'
+                        ? (event.data.object as Stripe.Checkout.Session).metadata?.bookingId
+                        : (event.data.object as Stripe.PaymentIntent).metadata?.bookingId
                 
                 if (bookingId) {
+                    const updatePayload: { status: BookingStatus; payment_status: PaymentStatus; updated_at: string } = {
+                        status: 'failed',
+                        payment_status: 'failed',
+                        updated_at: new Date().toISOString()
+                    }
                     await supabase
                         .from('bookings')
-                        .update({
-                            status: 'failed' as any,
-                            payment_status: 'failed' as any,
-                            updated_at: new Date().toISOString()
-                        } as never)
+                        .update(updatePayload as never)
                         .eq('id', bookingId)
                 }
                 break
@@ -82,11 +88,4 @@ export async function POST(req: NextRequest) {
             { status: 500 }
         )
     }
-}
-
-// Next.js Config: Make sure the body is not parsed by the framework automatically
-export const config = {
-    api: {
-        bodyParser: false,
-    },
 }

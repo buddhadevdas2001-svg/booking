@@ -29,8 +29,6 @@ import {
   Shield,
   Sparkles,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { getCurrentProfile } from '@/lib/api'
 import { useAuthStore } from '@/store'
 import toast from 'react-hot-toast'
 import Brand from '@/components/common/Brand'
@@ -333,7 +331,7 @@ export default function LoginPage() {
                 </Divider>
 
                 <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>
-                  Don't have an account?{' '}
+                  Don&apos;t have an account?{' '}
                   <Link href="/auth/register" style={{ color: theme.palette.primary.main, fontWeight: 700, textDecoration: 'none' }}>
                     Create one
                   </Link>

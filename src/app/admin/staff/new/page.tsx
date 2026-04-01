@@ -102,12 +102,12 @@ export default function NewStaffPage() {
       <Box component="form" onSubmit={handleSubmit}>
         <Grid container spacing={4}>
           {/* Role Selection */}
-          <Grid size={12}>
+          <Grid size={{ xs: 12 }}>
             <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider' }}>
               <Typography variant="h6" sx={{ fontWeight: 800, mb: 3 }}>Staff Role</Typography>
               <Grid container spacing={2}>
                 {ROLES.map((role) => (
-                  <Grid key={role.value} size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }} key={role.value}>
                     <Paper
                       onClick={() => update('staff_type', role.value)}
                       elevation={0}
@@ -137,7 +137,7 @@ export default function NewStaffPage() {
           </Grid>
 
           {/* Personal Info */}
-          <Grid size={12}>
+          <Grid size={{ xs: 12 }}>
             <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider' }}>
               <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
                 <UserPlus size={20} style={{ color: theme.palette.primary.main }} />
@@ -170,7 +170,7 @@ export default function NewStaffPage() {
           </Grid>
 
           {/* Professional Info */}
-          <Grid size={12}>
+          <Grid size={{ xs: 12 }}>
             <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider' }}>
               <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
                 <Briefcase size={20} style={{ color: theme.palette.primary.main }} />
@@ -257,7 +257,7 @@ export default function NewStaffPage() {
           </Grid>
 
           {/* Actions */}
-          <Grid size={12}>
+          <Grid size={{ xs: 12 }}>
             <Stack direction="row" justifyContent="flex-end" spacing={2}>
               <Button href="/admin/staff" component="a" variant="outlined" sx={{ borderRadius: 3, fontWeight: 700, px: 4 }}>
                 Cancel

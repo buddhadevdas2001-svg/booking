@@ -1,6 +1,19 @@
 import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { useBookingStore } from '@/store'
+
+type SeatLockRow = {
+  seat_label: string
+}
+
+type BookingRow = {
+  id: string
+}
+
+type BookedSeatRow = {
+  seat_label: string
+}
 
 export function useRealtimeSeats(tripId: string) {
   const { setLockedSeats } = useBookingStore()
@@ -17,7 +30,7 @@ export function useRealtimeSeats(tripId: string) {
           table: 'seat_locks',
           filter: `trip_id=eq.${tripId}`,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<SeatLockRow>) => {
           if (payload.eventType === 'INSERT') {
             setLockedSeats((prev: string[]) => [...prev, payload.new.seat_label])
           } else if (payload.eventType === 'DELETE') {
@@ -38,15 +51,21 @@ export function useRealtimeSeats(tripId: string) {
           table: 'bookings',
           filter: `trip_id=eq.${tripId}`,
         },
-        async (payload) => {
+        async (payload: RealtimePostgresChangesPayload<BookingRow>) => {
+          const bookingId = typeof payload.new === 'object' && payload.new && 'id' in payload.new
+            ? String(payload.new.id)
+            : null
+          if (!bookingId) return
+
           // Fetch the booked seats for this booking and remove them from locked seats
           const { data: seats } = await createClient()
             .from('booking_seats')
             .select('seat_label')
-            .eq('booking_id', payload.new.id)
+            .eq('booking_id', bookingId)
 
-          if (seats && seats.length > 0) {
-            setLockedSeats((prev: string[]) => prev.filter(seat => !seats.some((booked: any) => booked.seat_label === seat)))
+          const bookedSeats = (seats || []) as BookedSeatRow[]
+          if (bookedSeats.length > 0) {
+            setLockedSeats((prev: string[]) => prev.filter(seat => !bookedSeats.some((booked) => booked.seat_label === seat)))
           }
         }
       )

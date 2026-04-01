@@ -3,7 +3,7 @@
 import React from 'react'
 import Navbar from '@/components/common/Navbar'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Ticket,
   User,
@@ -25,6 +25,8 @@ import {
   Divider,
   Avatar,
 } from '@mui/material'
+import toast from 'react-hot-toast'
+import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/store'
 
 const navItems = [
@@ -36,8 +38,17 @@ const navItems = [
 
 export default function CustomerDashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const theme = useTheme()
-  const { user } = useAuthStore()
+  const { user, setUser } = useAuthStore()
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    setUser(null)
+    toast.success('Logged out successfully')
+    router.push('/auth/login')
+  }
 
   return (
     <Box
@@ -169,6 +180,7 @@ export default function CustomerDashboardLayout({ children }: { children: React.
                   <Button
                     startIcon={<LogOut size={18} />}
                     fullWidth
+                    onClick={handleLogout}
                     sx={{
                       justifyContent: 'flex-start',
                       px: 2,

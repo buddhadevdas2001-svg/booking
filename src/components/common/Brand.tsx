@@ -61,7 +61,7 @@ export default function Brand({
         <Box sx={{ position: 'absolute', inset: '2px', borderRadius: 'inherit', bgcolor: 'rgba(255,255,255,0.12)' }} />
         <Box sx={{ position: 'absolute', inset: '8px', borderRadius: '0.95rem', border: '1px solid rgba(255,255,255,0.16)' }} />
         <Box sx={{ position: 'absolute', left: '50%', top: '50%', height: '64%', width: '64%', transform: 'translate(-50%, -50%)', borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.1)', filter: 'blur(2px)' }} />
-        <Box sx={{ relative: 'z-10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Typography
             variant="h4"
             className="outfit"
@@ -85,7 +85,7 @@ export default function Brand({
             /
           </Typography>
         </Box>
-        <Box sx={{ position: 'absolute', bottom: '0.82rem', left: '50%', height: '2px', width: '44%', transform: 'translateX(-50%)', borderRadius: 'full', bgcolor: 'rgba(255,255,255,0.4)' }} />
+        <Box sx={{ position: 'absolute', bottom: '0.82rem', left: '50%', height: '2px', width: '44%', transform: 'translateX(-50%)', borderRadius: 999, bgcolor: 'rgba(255,255,255,0.4)' }} />
       </LogoBox>
 
       {!iconOnly && (

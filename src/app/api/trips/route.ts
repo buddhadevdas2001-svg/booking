@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { SearchTrip } from '@/types/supabase'
 
 export async function GET(req: NextRequest) {
     try {
@@ -26,7 +27,8 @@ export async function GET(req: NextRequest) {
         const { data, error } = await query
         if (error) throw error
 
-        const filtered = (data || []).filter((trip: any) => {
+        const trips = (data || []) as SearchTrip[]
+        const filtered = trips.filter((trip) => {
             const origin = trip.route?.origin?.toLowerCase() || ''
             const destination = trip.route?.destination?.toLowerCase() || ''
 

@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-
 import { calculateDynamicPrice } from '@/lib/pricing_engine'
+import type { SearchTrip, SeatLayout } from '@/types/supabase'
+
+type TripDetail = SearchTrip & {
+    bus_id?: string
+    seat_layout_id?: string | null
+    seat_layout?: SeatLayout
+    pricing_context?: ReturnType<typeof calculateDynamicPrice>
+}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -21,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         if (error) throw error
         if (!trip) return NextResponse.json({ message: 'Trip not found' }, { status: 404 })
 
-        const tripData = trip as any
+        const tripData = { ...trip } as TripDetail
 
         // Priority 1: Check if trip has an explicit seat_layout_id
         if (tripData.seat_layout_id) {
@@ -31,7 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                 .eq('id', tripData.seat_layout_id)
                 .single()
             if (seat_layout) {
-                tripData.seat_layout = seat_layout
+                tripData.seat_layout = seat_layout as SeatLayout
             }
         } 
         
@@ -46,7 +53,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                 .limit(1)
 
             if (layouts && layouts.length > 0) {
-                tripData.seat_layout = layouts[0]
+                tripData.seat_layout = layouts[0] as SeatLayout
             }
         }
 

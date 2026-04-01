@@ -26,12 +26,30 @@ import {
   useTheme,
   Skeleton,
 } from '@mui/material'
+import type { ChipProps } from '@mui/material'
+import type { Booking } from '@/types/supabase'
+
+type AdminBookingRow = Booking & {
+  user?: {
+    email?: string | null
+  } | null
+  trip?: {
+    departure_time?: string | null
+    route?: {
+      origin?: string | null
+      destination?: string | null
+    } | null
+    bus?: {
+      name?: string | null
+    } | null
+  } | null
+}
 
 export default function AdminBookingsPage() {
   const theme = useTheme()
   const [searchTerm, setSearchTerm] = useState('')
 
-  const { data: bookings, isLoading } = useQuery({
+  const { data: bookings, isLoading } = useQuery<AdminBookingRow[]>({
     queryKey: ['admin-bookings'],
     queryFn: async () => {
       const supabase = createClient()
@@ -49,21 +67,24 @@ export default function AdminBookingsPage() {
         .order('created_at', { ascending: false })
       
       if (error) throw error
-      return data as any[]
+      return (data || []) as AdminBookingRow[]
     }
   })
 
   const filteredBookings = bookings?.filter((b) => {
     const term = searchTerm.toLowerCase()
+    const email = b.user?.email?.toLowerCase() || ''
+    const origin = b.trip?.route?.origin?.toLowerCase() || ''
+    const destination = b.trip?.route?.destination?.toLowerCase() || ''
     return (
       b.id.toLowerCase().includes(term) ||
-      b.user?.email.toLowerCase().includes(term) ||
-      b.trip?.route?.origin.toLowerCase().includes(term) ||
-      b.trip?.route?.destination.toLowerCase().includes(term)
+      email.includes(term) ||
+      origin.includes(term) ||
+      destination.includes(term)
     )
   })
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): ChipProps['color'] => {
     switch (status) {
       case 'confirmed': return 'success'
       case 'pending': return 'warning'
@@ -125,10 +146,12 @@ export default function AdminBookingsPage() {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 800 }}>{booking.trip?.route?.origin} → {booking.trip?.route?.destination}</Typography>
-                    <Typography variant="caption" color="text.secondary">{new Date(booking.trip?.departure_time).toLocaleString()}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {booking.trip?.departure_time ? new Date(booking.trip.departure_time).toLocaleString() : 'Departure pending'}
+                    </Typography>
                   </TableCell>
                   <TableCell><Typography variant="subtitle2" sx={{ fontWeight: 900 }}>₹{Number(booking.total_amount).toLocaleString()}</Typography></TableCell>
-                  <TableCell><Chip label={booking.status} size="small" color={getStatusColor(booking.status) as any} /></TableCell>
+                  <TableCell><Chip label={booking.status} size="small" color={getStatusColor(booking.status)} /></TableCell>
                   <TableCell align="right"><IconButton size="small"><Eye size={18} /></IconButton></TableCell>
                 </TableRow>
               ))}

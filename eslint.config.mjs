@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "supabase/functions/**",
+    "__probe.cjs",
+    "__register.json",
+    "__t.json",
   ]),
 ]);
 

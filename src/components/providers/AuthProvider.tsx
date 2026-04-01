@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { useAuthStore } from '@/store'
 import { getCurrentProfile } from '@/lib/api'
 
@@ -10,16 +11,20 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     useEffect(() => {
         const supabase = createClient()
+        let isMounted = true
 
-        // Check active sessions and sets the user
+        const syncProfile = async () => {
+            const profile = await getCurrentProfile().catch(() => null)
+            if (isMounted) {
+                setUser(profile)
+            }
+        }
+
         const init = async () => {
             const { data: { session } } = await supabase.auth.getSession()
             if (session?.user) {
                 try {
-                    const profile = await getCurrentProfile().catch(() => null)
-                    if (profile) {
-                        setUser(profile)
-                    }
+                    await syncProfile()
                 } catch (e) {
                     console.warn('Profile sync skipped: User record might be missing in profiles table.')
                 }
@@ -30,19 +35,29 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         init()
 
-        // Listen for changes on auth state (logged in, signed out, etc.)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        // Supabase warns against awaiting other Supabase calls directly inside this callback.
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
             if (session?.user) {
-                const profile = await getCurrentProfile()
-                if (profile) {
-                    setUser(profile)
-                }
+                const fallbackName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User'
+                setUser({
+                    id: session.user.id,
+                    email: session.user.email,
+                    full_name: fallbackName,
+                    phone: session.user.user_metadata?.phone,
+                    role: 'customer',
+                })
+                window.setTimeout(() => {
+                    void syncProfile()
+                }, 0)
             } else {
                 setUser(null)
             }
         })
 
-        return () => subscription.unsubscribe()
+        return () => {
+            isMounted = false
+            subscription.unsubscribe()
+        }
     }, [setUser])
 
     return <>{children}</>

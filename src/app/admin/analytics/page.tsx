@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Box, Typography, Paper, Stack, Button, Grid, Chip,
-  alpha, useTheme, Divider, ToggleButtonGroup, ToggleButton, Skeleton,
+  alpha, useTheme, Divider, ToggleButtonGroup, ToggleButton, Skeleton, NoSsr,
 } from '@mui/material'
 import {
   BarChart3, TrendingUp, MapPin, IndianRupee, RefreshCw,
@@ -14,15 +14,29 @@ import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, Tooltip, PieChart, Pie, Cell,
 } from 'recharts'
+import type { AdminAnalytics, AdminSummary, AnalyticsRoutePoint } from '@/types/supabase'
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '#06b6d4']
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+type ChartTooltipEntry = {
+  dataKey?: string
+  name?: string
+  value?: number | string
+  color?: string
+}
+
+type ChartTooltipProps = {
+  active?: boolean
+  payload?: ChartTooltipEntry[]
+  label?: string
+}
+
+const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   if (!active || !payload?.length) return null
   return (
     <Paper elevation={8} sx={{ p: 2, borderRadius: 3 }}>
       <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 1, color: 'text.secondary' }}>{label}</Typography>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <Typography key={p.dataKey} variant="body2" sx={{ fontWeight: 800, color: p.color }}>
           {p.name}: {typeof p.value === 'number' && p.name?.includes('Revenue') ? `₹${p.value.toLocaleString('en-IN')}` : p.value}
         </Typography>
@@ -35,7 +49,7 @@ export default function AdminAnalyticsPage() {
   const theme = useTheme()
   const [timeframe, setTimeframe] = useState('month')
 
-  const { data: analytics, isLoading, refetch, isFetching } = useQuery({
+  const { data: analytics, isLoading, refetch, isFetching } = useQuery<AdminAnalytics>({
     queryKey: ['admin-analytics', timeframe],
     queryFn: async () => {
       const res = await fetch('/api/admin/analytics')
@@ -44,7 +58,7 @@ export default function AdminAnalyticsPage() {
     },
   })
 
-  const { data: summary } = useQuery({
+  const { data: summary } = useQuery<AdminSummary>({
     queryKey: ['admin-summary'],
     queryFn: async () => {
       const res = await fetch('/api/admin/summary')
@@ -53,19 +67,19 @@ export default function AdminAnalyticsPage() {
     },
   })
 
-  const revenueData = (analytics?.revenueSeries || []).map((r: any) => ({
+  const revenueData = (analytics?.revenueSeries || []).map((r) => ({
     ...r,
     name: new Date(r.day).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
   }))
 
   const routeData = analytics?.popularRoutes || []
 
-  const busTypeData = (analytics?.busTypes || []).map((item: any, i: number) => ({
+  const busTypeData = (analytics?.busTypes || []).map((item, i: number) => ({
     ...item,
     color: COLORS[i % COLORS.length],
   }))
 
-  const totalRevenue = revenueData.reduce((s: number, r: any) => s + (r.revenue || 0), 0)
+  const totalRevenue = revenueData.reduce((s: number, r) => s + (r.revenue || 0), 0)
   const totalBookings = summary?.stats?.totalBookings ?? 0
   const totalUsers = summary?.stats?.totalUsers ?? 0
   const activeBuses = summary?.stats?.activeBuses ?? 0
@@ -151,7 +165,7 @@ export default function AdminAnalyticsPage() {
 
       {/* Revenue & Bus Type Charts */}
       <Grid container spacing={4}>
-        <Grid size={{ xs: 12, lg: 8 }}>
+        <Grid size={{ xs: 12, lg: 8 }} sx={{ minWidth: 0 }}>
           <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
               <Box>
@@ -163,7 +177,8 @@ export default function AdminAnalyticsPage() {
             {isLoading
               ? <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 4 }} />
               : (
-                <ResponsiveContainer width="100%" height={280}>
+                <NoSsr fallback={<Skeleton variant="rectangular" height={280} sx={{ borderRadius: 4 }} />}>
+                  <ResponsiveContainer width="100%" height={280}>
                   <AreaChart data={revenueData}>
                     <defs>
                       <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
@@ -176,13 +191,14 @@ export default function AdminAnalyticsPage() {
                     <Tooltip content={<CustomTooltip />} />
                     <Area type="monotone" dataKey="revenue" name="Revenue" stroke={theme.palette.primary.main} strokeWidth={3} fill="url(#revenueGrad)" dot={false} activeDot={{ r: 6, fill: theme.palette.primary.main }} />
                   </AreaChart>
-                </ResponsiveContainer>
+                  </ResponsiveContainer>
+                </NoSsr>
               )
             }
           </Paper>
         </Grid>
 
-        <Grid size={{ xs: 12, lg: 4 }}>
+        <Grid size={{ xs: 12, lg: 4 }} sx={{ minWidth: 0 }}>
           <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider', height: '100%' }}>
             <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>Bus Type Mix</Typography>
             <Typography variant="caption" color="text.secondary">Fleet distribution by type</Typography>
@@ -197,21 +213,23 @@ export default function AdminAnalyticsPage() {
               )
               : (
                 <>
-                  <Box sx={{ height: 220, mt: 2 }}>
-                    <ResponsiveContainer>
-                      <PieChart>
-                        <Pie data={busTypeData} innerRadius={60} outerRadius={90} paddingAngle={6} dataKey="value">
-                          {busTypeData.map((entry: any, i: number) => (
-                            <Cell key={i} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<CustomTooltip />} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                  <Box sx={{ height: 220, mt: 2, minWidth: 0, minHeight: 0 }}>
+                    <NoSsr fallback={<Skeleton variant="rounded" height={220} sx={{ borderRadius: 4 }} />}>
+                      <ResponsiveContainer>
+                        <PieChart>
+                          <Pie data={busTypeData} innerRadius={60} outerRadius={90} paddingAngle={6} dataKey="value">
+                            {busTypeData.map((entry, i: number) => (
+                              <Cell key={i} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip content={<CustomTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </NoSsr>
                   </Box>
                   <Divider sx={{ my: 2 }} />
                   <Stack spacing={1}>
-                    {busTypeData.map((item: any, i: number) => (
+                    {busTypeData.map((item, i: number) => (
                       <Stack key={i} direction="row" justifyContent="space-between" alignItems="center">
                         <Stack direction="row" spacing={1.5} alignItems="center">
                           <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: item.color }} />
@@ -230,7 +248,7 @@ export default function AdminAnalyticsPage() {
 
       {/* Route Performance */}
       <Grid container spacing={4}>
-        <Grid size={{ xs: 12, lg: 7 }}>
+        <Grid size={{ xs: 12, lg: 7 }} sx={{ minWidth: 0 }}>
           <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 4 }}>
               <MapPin size={20} style={{ color: theme.palette.primary.main }} />
@@ -244,24 +262,26 @@ export default function AdminAnalyticsPage() {
               : routeData.length === 0
               ? <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>No route data yet</Typography>
               : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={routeData} layout="vertical" margin={{ left: 20 }}>
-                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: theme.palette.text.secondary }} />
-                    <YAxis type="category" dataKey="name" width={140} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: theme.palette.text.secondary }} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="bookings" name="Bookings" radius={[0, 6, 6, 0]}>
-                      {routeData.map((_: any, i: number) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <NoSsr fallback={<Skeleton variant="rectangular" height={260} sx={{ borderRadius: 4 }} />}>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={routeData} layout="vertical" margin={{ left: 20 }}>
+                      <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: theme.palette.text.secondary }} />
+                      <YAxis type="category" dataKey="name" width={140} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: theme.palette.text.secondary }} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar dataKey="bookings" name="Bookings" radius={[0, 6, 6, 0]}>
+                        {routeData.map((_, i: number) => (
+                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </NoSsr>
               )
             }
           </Paper>
         </Grid>
 
-        <Grid size={{ xs: 12, lg: 5 }}>
+        <Grid size={{ xs: 12, lg: 5 }} sx={{ minWidth: 0 }}>
           <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider', height: '100%' }}>
             <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 4 }}>
               <TrendingUp size={20} style={{ color: theme.palette.primary.main }} />
@@ -270,7 +290,7 @@ export default function AdminAnalyticsPage() {
             <Stack spacing={0} divider={<Divider />}>
               {isLoading
                 ? Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} height={52} />)
-                : routeData.slice(0, 6).map((route: any, i: number) => (
+                : routeData.slice(0, 6).map((route: AnalyticsRoutePoint, i: number) => (
                     <Box key={i} sx={{ py: 2 }}>
                       <Stack direction="row" justifyContent="space-between" alignItems="center">
                         <Stack direction="row" spacing={1.5} alignItems="center">

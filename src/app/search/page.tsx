@@ -1,10 +1,9 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import Lottie from 'lottie-react'
 import {
   ArrowRight,
   Bus as BusIcon,
@@ -42,6 +41,7 @@ import {
 } from '@mui/material'
 import Navbar from '@/components/common/Navbar'
 import { searchTrips } from '@/lib/api'
+import type { SearchTrip } from '@/types/supabase'
 
 function SearchContent() {
   const theme = useTheme()
@@ -57,26 +57,18 @@ function SearchContent() {
     sortBy: 'departure_time',
   })
   const [showFilters, setShowFilters] = useState(false)
-  const [animationData, setAnimationData] = useState<any>(null)
 
-  useEffect(() => {
-    fetch('https://assets7.lottiefiles.com/packages/lf20_tutvdkg0.json')
-      .then((res) => res.json())
-      .then(setAnimationData)
-      .catch(() => setAnimationData(null))
-  }, [])
-
-  const { data: trips, isLoading } = useQuery({
+  const { data: trips, isLoading } = useQuery<SearchTrip[]>({
     queryKey: ['search-trips', from, to, date],
     queryFn: () => searchTrips({ from, to, date }),
   })
 
   const filteredTrips = useMemo(() => {
-    return trips?.filter((trip: any) => {
+    return trips?.filter((trip) => {
       if (filters.busType !== 'all' && trip.bus?.bus_type !== filters.busType) return false
       if (trip.base_price < filters.priceRange[0] || trip.base_price > filters.priceRange[1]) return false
       return true
-    }).sort((a: any, b: any) => {
+    }).sort((a, b) => {
       if (filters.sortBy === 'price_low') return a.base_price - b.base_price
       if (filters.sortBy === 'price_high') return b.base_price - a.base_price
       if (filters.sortBy === 'departure_time') {
@@ -117,7 +109,7 @@ function SearchContent() {
             elevation={0}
             sx={{
               p: { xs: 3, md: 5 },
-              borderRadius: 8,
+              borderRadius: 1,
               border: '1px solid',
               borderColor: 'divider',
               position: 'relative',
@@ -153,19 +145,19 @@ function SearchContent() {
                         icon={<MapPin size={16} />}
                         label={from || 'Origin'}
                         variant="outlined"
-                        sx={{ borderRadius: 2, fontWeight: 600 }}
+                        sx={{ borderRadius: 1, fontWeight: 600 }}
                       />
                       <Chip
                         icon={<MapPin size={16} />}
                         label={to || 'Destination'}
                         variant="outlined"
-                        sx={{ borderRadius: 2, fontWeight: 600 }}
+                        sx={{ borderRadius: 1, fontWeight: 600 }}
                       />
                       <Chip
                         icon={<Calendar size={16} />}
                         label={formatDateDisplay(date)}
                         variant="outlined"
-                        sx={{ borderRadius: 2, fontWeight: 600 }}
+                        sx={{ borderRadius: 1, fontWeight: 600 }}
                       />
                     </Stack>
                   </Box>
@@ -180,7 +172,7 @@ function SearchContent() {
                     variant="outlined"
                     startIcon={<SlidersHorizontal size={18} />}
                     onClick={() => setShowFilters(!showFilters)}
-                    sx={{ display: { lg: 'none' }, borderRadius: 4, px: 3, py: 1.5, fontWeight: 700 }}
+                    sx={{ display: { lg: 'none' }, borderRadius: 1, px: 3, py: 1.5, fontWeight: 700 }}
                   >
                     Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
                   </Button>
@@ -189,7 +181,7 @@ function SearchContent() {
                     href="/"
                     variant="contained"
                     startIcon={<ChevronLeft size={18} />}
-                    sx={{ borderRadius: 4, px: 4, py: 1.5, fontWeight: 800, boxShadow: theme.shadows[4] }}
+                    sx={{ borderRadius: 1, px: 4, py: 1.5, fontWeight: 800, boxShadow: theme.shadows[4] }}
                   >
                     Modify Search
                   </Button>
@@ -206,7 +198,7 @@ function SearchContent() {
                   elevation={0}
                   sx={{
                     p: 4,
-                    borderRadius: 6,
+                    borderRadius: 1,
                     border: '1px solid',
                     borderColor: 'divider',
                     position: { lg: 'sticky' },
@@ -246,7 +238,7 @@ function SearchContent() {
                                 key={option.value}
                                 variant="outlined"
                                 sx={{
-                                  borderRadius: 3,
+                                  borderRadius: 1,
                                   borderColor: filters.sortBy === option.value ? 'primary.main' : 'divider',
                                   bgcolor: filters.sortBy === option.value ? alpha(theme.palette.primary.main, 0.02) : 'transparent',
                                   transition: 'all 0.2s',
@@ -278,7 +270,7 @@ function SearchContent() {
                             onClick={() => setFilters(prev => ({ ...prev, busType: type }))}
                             color={filters.busType === type ? 'primary' : 'default'}
                             variant={filters.busType === type ? 'filled' : 'outlined'}
-                            sx={{ fontWeight: 700, borderRadius: 2 }}
+                            sx={{ fontWeight: 700, borderRadius: 1 }}
                           />
                         ))}
                       </Stack>
@@ -293,7 +285,7 @@ function SearchContent() {
                           label={`₹${filters.priceRange[1]}`}
                           size="small"
                           color="primary"
-                          sx={{ fontWeight: 800, borderRadius: 1 }}
+                          sx={{ fontWeight: 800, borderRadius: 0.5 }}
                         />
                       </Box>
                       <Box sx={{ px: 1 }}>
@@ -321,7 +313,7 @@ function SearchContent() {
               <Stack spacing={3}>
                 <Box sx={{ mb: 1 }}>
                   <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                    {isLoading ? 'Searching...' : `${filteredTrips?.length || 0} Ships Found`}
+                    {isLoading ? 'Searching...' : `${filteredTrips?.length || 0} Trips Found`}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Available trips for your selected route and date.
@@ -331,7 +323,7 @@ function SearchContent() {
                 {isLoading ? (
                   <Stack spacing={3}>
                     {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} variant="rectangular" height={220} sx={{ borderRadius: 6 }} />
+                      <Skeleton key={i} variant="rectangular" height={220} sx={{ borderRadius: 1 }} />
                     ))}
                   </Stack>
                 ) : filteredTrips?.length === 0 ? (
@@ -339,7 +331,7 @@ function SearchContent() {
                     elevation={0}
                     sx={{
                       p: 8,
-                      borderRadius: 6,
+                      borderRadius: 1,
                       border: '2px dashed',
                       borderColor: 'divider',
                       textAlign: 'center',
@@ -362,7 +354,7 @@ function SearchContent() {
                       No buses found
                     </Typography>
                     <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 400, mx: 'auto', mb: 3 }}>
-                      We couldn't find any buses matching your search. Try adjusting your filters or search for a different date.
+                      We couldn&apos;t find any buses matching your search. Try adjusting your filters or search for a different date.
                     </Typography>
                     <Button variant="contained" size="large" onClick={() => window.history.back()} sx={{ borderRadius: 4, px: 4 }}>
                       Go Back
@@ -370,12 +362,12 @@ function SearchContent() {
                   </Paper>
                 ) : (
                   <Stack spacing={3}>
-                    {filteredTrips?.map((trip: any) => (
+                    {filteredTrips?.map((trip) => (
                       <Paper
                         key={trip.id}
                         elevation={0}
                         sx={{
-                          borderRadius: 8,
+                          borderRadius: 1,
                           border: '1px solid',
                           borderColor: 'divider',
                           bgcolor: 'background.paper',
@@ -423,7 +415,7 @@ function SearchContent() {
                                 variant="outlined"
                                 sx={{
                                   p: 3,
-                                  borderRadius: 4,
+                                  borderRadius: 1,
                                   bgcolor: alpha(theme.palette.divider, 0.02),
                                   display: 'flex',
                                   alignItems: 'center',

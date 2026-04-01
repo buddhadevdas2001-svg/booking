@@ -1,3 +1,21 @@
+export type UserRole = 'admin' | 'agent' | 'customer' | 'driver' | 'conductor'
+
+export type SeatType = 'seater' | 'sleeper' | 'driver' | 'empty'
+
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'refunded' | 'failed'
+
+export type TripStatus = 'scheduled' | 'boarding' | 'departed' | 'arrived' | 'cancelled' | 'delayed'
+
+export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded' | 'partially_refunded'
+
+export type PassengerDetail = {
+  name?: string
+  age?: number
+  gender?: string
+  seat_label?: string
+  [key: string]: unknown
+}
+
 export type AvailableSeatRow = {
   seat_label: string
   is_available: boolean
@@ -8,7 +26,7 @@ export type SearchTrip = {
   id: string
   departure_time: string
   arrival_time: string
-  status: string
+  status: TripStatus
   available_seats: number
   total_seats: number
   base_price: number
@@ -27,20 +45,6 @@ export type SearchTrip = {
     layout_data: SeatLayoutData
   }
 }
-
-export type AdminSummary = {
-  stats: {
-    totalBookings: number
-    totalRevenue: number
-    totalUsers: number
-    activeBuses: number
-    confirmationRate: number
-  }
-  recentBookings: (Booking & { trip: SearchTrip })[]
-  upcomingTrips: SearchTrip[]
-}
-
-export type SeatType = 'seater' | 'sleeper' | 'driver' | 'empty'
 
 export type Seat = {
   id: string
@@ -75,12 +79,13 @@ export type Booking = {
   user_id: string
   trip_id: string
   total_amount: number
+  discount_amount?: number
   final_amount: number
-  passenger_details: any
+  passenger_details: PassengerDetail[] | null
   contact_email: string
   contact_phone: string
-  status: string
-  payment_status: string
+  status: BookingStatus
+  payment_status: PaymentStatus
   created_at: string
 }
 
@@ -92,6 +97,18 @@ export type BookingSeat = {
   passenger_age: number
   price: number
   status: string
+}
+
+export type Payment = {
+  id: string
+  booking_id: string
+  transaction_id: string
+  gateway: string
+  amount: number
+  currency: string
+  status: string
+  created_at: string
+  gateway_response?: Record<string, unknown> | null
 }
 
 export type Bus = {
@@ -111,6 +128,7 @@ export type Route = {
   distance_km: number
   estimated_duration_minutes: number
   is_active: boolean
+  min_price?: number
 }
 
 export type Trip = {
@@ -119,9 +137,10 @@ export type Trip = {
   route_id: string
   departure_time: string
   arrival_time: string
-  status: string
+  status: TripStatus
   base_price: number
   available_seats: number
+  total_seats?: number
 }
 
 export type Coupon = {
@@ -138,14 +157,15 @@ export type Profile = {
   id: string
   full_name: string
   email?: string
-  role?: 'customer' | 'admin' | 'agent' | 'staff'
+  role?: UserRole
   phone?: string
   avatar_url?: string
+  created_at?: string
 }
 
 export type Staff = {
   id: string
-  staff_type: string
+  staff_type: UserRole
   employee_id: string
   license_number: string
   experience_years: number
@@ -155,9 +175,74 @@ export type Staff = {
   user_id: string
 }
 
+export type AnalyticsRevenuePoint = {
+  day: string
+  revenue: number
+  name?: string
+}
+
+export type AnalyticsRoutePoint = {
+  name: string
+  bookings: number
+  revenue?: number
+}
+
+export type AnalyticsBusTypePoint = {
+  name: string
+  value: number
+  color?: string
+}
+
+export type AdminAnalytics = {
+  revenueSeries: AnalyticsRevenuePoint[]
+  popularRoutes: AnalyticsRoutePoint[]
+  busTypes: AnalyticsBusTypePoint[]
+  avgOccupancy: number
+}
+
+export type AdminRecentBooking = Booking & {
+  trip?: {
+    route?: {
+      origin?: string
+      destination?: string
+    }
+    bus?: {
+      name?: string
+    }
+  }
+}
+
+export type AdminUpcomingTrip = Trip & {
+  route?: {
+    origin?: string
+    destination?: string
+  }
+  bus?: {
+    name?: string
+    total_seats?: number
+    bus_type?: string
+  }
+}
+
+export type AdminSummary = {
+  stats: {
+    totalBookings: number
+    totalRevenue: number
+    totalUsers: number
+    activeBuses: number
+    confirmationRate: number
+  }
+  recentBookings: AdminRecentBooking[]
+  upcomingTrips: AdminUpcomingTrip[]
+}
+
 export type Database = {
   public: {
     Tables: {
+      [key: string]: {
+        Row: Record<string, unknown>
+        Insert: Record<string, unknown>
+      }
       bookings: {
         Row: Booking
         Insert: Partial<Booking>
@@ -165,6 +250,26 @@ export type Database = {
       staff: {
         Row: Staff
         Insert: Partial<Staff>
+      }
+      payments: {
+        Row: Payment
+        Insert: Partial<Payment>
+      }
+      trip_staff: {
+        Row: {
+          id: string
+          trip_id: string
+          staff_id: string
+          role: string
+          attendance_status?: string
+          created_at?: string
+        }
+        Insert: {
+          trip_id: string
+          staff_id: string
+          role: string
+          attendance_status?: string
+        }
       }
       // Add other tables as needed for createAdminClient
     }

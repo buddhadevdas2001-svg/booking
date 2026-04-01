@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAdminRequest } from '@/lib/admin-auth'
 
 export async function GET() {
+    const auth = await requireAdminRequest()
+    if (!auth.ok) return auth.response
     try {
         const supabase = createAdminClient()
-        const { data, error } = await supabase.from('staff').select('*').order('created_at', { ascending: false })
+        const { data, error } = await supabase
+            .from('staff')
+            .select(`
+              *,
+              user:profiles(id, full_name, phone, avatar_url)
+            `)
+            .order('created_at', { ascending: false })
         if (error) throw error
         return NextResponse.json(data)
     } catch (err) {
@@ -14,18 +23,50 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+    const auth = await requireAdminRequest()
+    if (!auth.ok) return auth.response
     try {
         const payload = await req.json()
         const { full_name, phone, ...staffData } = payload
         const supabase = createAdminClient()
 
-        // 1. We need a profile. Since this is an admin adding staff, 
-        // we might not have a real User ID yet (no invite flow fully implemented).
-        // For now, we'll create a profile with a deterministic UUID based on name/phone 
-        // or just a new UUID if we want to support multiple staff with same name.
-        // BETTER: We'll create a staff record and let the user_id be NULL until they link it via login.
-        // But our schema might require user_id. Let's check.
-        // Actually, let's just insert the staff record.
+        // Generate a fake user to store the profile info
+        const fakeEmail = `staff_${Date.now()}@voyatra.local`
+        const fakePassword = `Staff#${Date.now()}!${Math.random()}`
+        
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+            email: fakeEmail,
+            password: fakePassword,
+            email_confirm: true,
+            user_metadata: {
+                full_name,
+                phone,
+                role: staffData.staff_type
+            }
+        })
+
+        if (authError || !authData.user) {
+            console.error('SERVER STAFF AUTH ERROR:', authError)
+            return NextResponse.json({ message: authError?.message || 'Failed to generate staff account' }, { status: 400 })
+        }
+
+        const userId = authData.user.id
+
+        // Small delay to allow Postgres trigger to create the public.profiles record
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+                full_name: full_name || 'Staff Member',
+                phone: phone || null,
+                role: staffData.staff_type || 'driver',
+            })
+            .eq('id', userId)
+
+        if (profileError) {
+            console.error('SERVER UPDATE PROFILE ERROR:', profileError)
+        }
         
         const { data, error } = await supabase
             .from('staff')
@@ -37,7 +78,7 @@ export async function POST(req: NextRequest) {
                 joining_date: staffData.joining_date,
                 salary: staffData.salary,
                 is_active: staffData.is_active,
-                user_id: null, // Allow creation without a linked user profile for now
+                user_id: userId,
             })
             .select()
             .single()

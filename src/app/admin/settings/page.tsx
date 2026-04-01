@@ -56,7 +56,7 @@ export default function AdminSettingsPage() {
         }
     }
 
-    const updateSetting = (key: string, value: any) => {
+    const updateSetting = <K extends keyof typeof settings>(key: K, value: (typeof settings)[K]) => {
         setSettings(prev => ({ ...prev, [key]: value }))
     }
 

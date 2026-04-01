@@ -33,11 +33,15 @@ import {
   X,
   Ticket,
   ChevronRight,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/store'
 import toast from 'react-hot-toast'
 import Brand from '@/components/common/Brand'
+import { useThemeStore } from '@/store'
+import { useTheme, alpha } from '@mui/material/styles'
 
 type NavLinkItem = {
   href: string
@@ -60,19 +64,22 @@ const homeNavLinks: NavLinkItem[] = [
 
 export default function Navbar() {
   const { user, setUser } = useAuthStore()
+  const { mode, toggleMode } = useThemeStore()
   const router = useRouter()
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const isHome = pathname === '/'
-  const desktopLinks = isHome ? homeNavLinks : navLinks
-
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const openUserMenu = Boolean(anchorEl)
+  const theme = useTheme()
 
   const trigger = useScrollTrigger({
     disableHysteresis: true,
     threshold: 20,
   })
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const openUserMenu = Boolean(anchorEl)
+
+  const isPublicPage = pathname === '/' || pathname === '/about' || pathname === '/contact' || pathname === '/dashboard/bookings'
+  const desktopLinks = isPublicPage ? homeNavLinks : navLinks
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -98,19 +105,20 @@ export default function Navbar() {
         position="fixed"
         elevation={trigger ? 4 : 0}
         sx={{
-          bgcolor: 'white',
-          borderBottom: '1px solid',
+          bgcolor: theme.palette.background.paper,
+          borderBottom: trigger ? '1px solid' : 'none',
           borderColor: 'divider',
           height: { xs: 72, md: 88 },
           display: 'flex',
           justifyContent: 'center',
           color: 'text.primary',
           zIndex: (theme) => theme.zIndex.drawer + 1,
+          transition: 'all 0.3s ease',
         }}
       >
-        <Container maxWidth="xl">
+        <Container maxWidth="lg">
           <Toolbar disableGutters sx={{ justifyContent: 'space-between' }}>
-            <Brand compact={false} dark={false} />
+            <Brand compact={false} />
 
             {/* Desktop Navigation */}
             <Box sx={{ display: { xs: 'none', lg: 'flex' }, gap: 1, alignItems: 'center' }}>
@@ -122,28 +130,31 @@ export default function Navbar() {
                     key={link.href}
                     component={Link}
                     href={link.href}
+                    aria-current={isActive ? 'page' : undefined}
                     sx={{
                       color: isActive ? 'primary.main' : 'text.secondary',
                       fontWeight: isActive ? 700 : 500,
                       fontSize: '1rem',
                       px: 2,
                       '&:hover': {
-                        bgcolor: 'rgba(57, 105, 197, 0.05)',
+                        bgcolor: alpha(theme.palette.primary.main, 0.05),
                         color: 'primary.main',
                       },
                       position: 'relative',
                       overflow: 'hidden',
-                      '&::after': isActive ? {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: 4,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: 20,
-                        height: 3,
-                        borderRadius: 2,
-                        bgcolor: 'primary.main',
-                      } : {},
+                      '&::after': isActive
+                        ? {
+                            content: '""',
+                            position: 'absolute',
+                            bottom: 4,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: 20,
+                            height: 3,
+                            borderRadius: 2,
+                            bgcolor: 'primary.main',
+                          }
+                        : {},
                     }}
                   >
                     {link.label}
@@ -153,7 +164,22 @@ export default function Navbar() {
             </Box>
 
             {/* Right Actions */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
+              <IconButton
+                onClick={toggleMode}
+                sx={{
+                  color: 'text.primary',
+                  borderRadius: 1,
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.text.primary, 0.05),
+                    transform: 'rotate(15deg)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                {mode === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              </IconButton>
+
               {user ? (
                 <>
                   <Button
@@ -174,19 +200,25 @@ export default function Navbar() {
                     sx={{
                       display: { xs: 'none', sm: 'flex' },
                       color: 'text.primary',
-                      bgcolor: 'rgba(57, 105, 197, 0.05)',
-                      borderRadius: '16px',
+                      bgcolor: alpha(theme.palette.primary.main, 0.05),
+                      borderRadius: 1,
                       textTransform: 'none',
                       fontWeight: 700,
                       px: 2,
                       py: 1,
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      }
                     }}
                   >
                     {user.full_name?.split(' ')[0]}
                   </Button>
                   <IconButton
                     onClick={handleUserMenuClick}
-                    sx={{ display: { xs: 'flex', sm: 'none' }, color: isHome ? 'text.primary' : 'white' }}
+                    sx={{
+                      display: { xs: 'flex', sm: 'none' },
+                      color: 'text.primary'
+                    }}
                   >
                     <User size={24} />
                   </IconButton>
@@ -200,10 +232,11 @@ export default function Navbar() {
                       sx: {
                         mt: 1.5,
                         minWidth: 200,
-                        borderRadius: 3,
+                        borderRadius: 1,
                         boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                         border: '1px solid',
                         borderColor: 'divider',
+                        bgcolor: theme.palette.background.paper,
                       },
                     }}
                     transformOrigin={{ horizontal: 'right', vertical: 'top' }}
@@ -234,10 +267,10 @@ export default function Navbar() {
                   </Menu>
                 </>
               ) : (
-                <Stack direction="row" spacing={1.5}>
+                <Stack direction="row" spacing={1} alignItems="center">
                   <Button
                     variant="text"
-                    color="primary"
+                    color="inherit"
                     onClick={() => router.push('/auth/login')}
                     sx={{
                       display: { xs: 'none', lg: 'flex' },
@@ -246,6 +279,10 @@ export default function Navbar() {
                       py: 1,
                       fontSize: '1rem',
                       fontWeight: 700,
+                      color: 'text.primary',
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.text.primary, 0.05),
+                      }
                     }}
                   >
                     Login
@@ -263,9 +300,7 @@ export default function Navbar() {
                       fontSize: '1rem',
                       fontWeight: 700,
                       boxShadow: 'none',
-                      '&:hover': {
-                        boxShadow: '0 4px 12px rgba(57, 105, 197, 0.3)',
-                      },
+                      '&:hover': { boxShadow: '0 4px 12px rgba(57, 105, 197, 0.3)' },
                     }}
                   >
                     Sign Up
@@ -274,15 +309,21 @@ export default function Navbar() {
               )}
 
               <IconButton
-                color="inherit"
-                aria-label="open drawer"
+                aria-label="Open navigation menu"
+                aria-haspopup={true}
                 edge="end"
                 onClick={() => setMobileOpen(true)}
-                sx={{ display: { lg: 'none' }, ml: 1 }}
+                sx={{
+                  display: { lg: 'none' },
+                  ml: 0.5,
+                  color: 'text.primary'
+                }}
               >
                 <MenuIcon size={28} />
               </IconButton>
             </Box>
+
+
           </Toolbar>
         </Container>
       </AppBar>
@@ -301,14 +342,14 @@ export default function Navbar() {
           },
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4, mt: 1 }}>
+        <Box role="navigation" aria-label="Mobile navigation" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4, mt: 1 }}>
           <Brand compact />
           <IconButton onClick={() => setMobileOpen(false)}>
             <X size={24} />
           </IconButton>
         </Box>
 
-        <Box sx={{ mb: 4, p: 2, bgcolor: isHome ? 'rgba(57, 105, 197, 0.05)' : 'action.hover', borderRadius: 4 }}>
+        <Box sx={{ mb: 4, p: 2, bgcolor: isPublicPage ? 'rgba(57, 105, 197, 0.05)' : 'action.hover', borderRadius: 4 }}>
           <Typography variant="caption" sx={{ letterSpacing: '0.2em', textTransform: 'uppercase', color: 'text.secondary', fontWeight: 700 }}>
             {user ? 'Signed In' : 'Guest Mode'}
           </Typography>
@@ -325,6 +366,7 @@ export default function Navbar() {
         <List sx={{ mb: 4 }}>
           {desktopLinks.map((link) => {
             const Icon = link.icon
+            const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href)
             return (
               <ListItem key={link.href} disablePadding sx={{ mb: 1 }}>
                 <ListItemButton
@@ -332,6 +374,7 @@ export default function Navbar() {
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
                   sx={{ borderRadius: 3 }}
+                  aria-current={isActive ? 'page' : undefined}
                 >
                   <ListItemIcon sx={{ minWidth: 40 }}>
                     {Icon ? <Icon size={20} /> : <ChevronRight size={20} />}
@@ -386,7 +429,6 @@ export default function Navbar() {
           )}
         </Box>
       </Drawer>
-      <Toolbar sx={{ height: { xs: 72, md: 88 } }} />
     </>
   )
 }

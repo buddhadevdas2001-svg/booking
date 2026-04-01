@@ -162,6 +162,11 @@ export default function RegisterPage() {
 
       if (loginError) throw loginError
 
+      const profile = await getCurrentProfile().catch(() => null)
+      if (profile) {
+        setUser(profile)
+      }
+
       toast.success('Account created successfully! Welcome aboard!')
       router.push('/')
     } catch (err) {

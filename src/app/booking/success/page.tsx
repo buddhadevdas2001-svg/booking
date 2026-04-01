@@ -15,7 +15,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/common/Navbar'
-import type { Booking, BookingSeat, Bus as BusType, Route as RouteType, Trip as TripType } from '@/types/supabase'
+import type { Booking, BookingSeat, Bus as BusType, PassengerDetail, Route as RouteType, Trip as TripType } from '@/types/supabase'
 
 type BookingDetail = Booking & {
   trip?: TripType & { route?: RouteType; bus?: BusType }
@@ -27,11 +27,23 @@ function BookingSuccessContent() {
   const theme = useTheme()
   const searchParams = useSearchParams()
   const bookingId = searchParams.get('booking_id')
+  const sessionId = searchParams.get('session_id')
 
   const { data: booking, isLoading } = useQuery<BookingDetail>({
-    queryKey: ['booking-success', bookingId],
+    queryKey: ['booking-success', bookingId, sessionId],
     queryFn: async () => {
       if (!bookingId) throw new Error('No booking ID')
+      if (sessionId) {
+        const confirmRes = await fetch('/api/checkout/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId, sessionId }),
+        })
+        if (!confirmRes.ok && confirmRes.status !== 409) {
+          const data = await confirmRes.json().catch(() => null)
+          throw new Error(data?.message || 'Failed to verify payment status')
+        }
+      }
       const supabase = createClient()
       const { data, error } = await supabase
         .from('bookings')
@@ -78,6 +90,7 @@ function BookingSuccessContent() {
 
   const dep = booking.trip?.departure_time
   const arr = booking.trip?.arrival_time
+  const passengers = Array.isArray(booking.passenger_details) ? booking.passenger_details as PassengerDetail[] : []
 
   const handlePrint = () => window.print()
   const handleDownload = () => {
@@ -224,7 +237,7 @@ function BookingSuccessContent() {
             </Typography>
             <Stack spacing={2}>
               {booking.booking_seats?.map((seat, idx) => {
-                const passenger = (booking.passenger_details as any)?.[idx]
+                const passenger = passengers[idx]
                 return (
                   <Stack key={seat.id} direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1}>
                     <Stack direction="row" spacing={2} alignItems="center">
