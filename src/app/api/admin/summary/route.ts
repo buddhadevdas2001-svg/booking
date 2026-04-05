@@ -12,10 +12,11 @@ export async function GET() {
     if (!auth.ok) return auth.response
     const supabase = createAdminClient()
 
-    const [bookingsRes, busesRes, usersRes, bookingsListRes, tripsRes] = await Promise.all([
-        supabase.from('bookings').select('id, final_amount, status, created_at').order('created_at', { ascending: false }),
-        supabase.from('buses').select('id').eq('is_active', true),
-        supabase.from('profiles').select('id'),
+    const [bookingsCountRes, confirmedBookingsRes, busesCountRes, usersCountRes, bookingsListRes, tripsRes] = await Promise.all([
+        supabase.from('bookings').select('id', { count: 'exact', head: true }),
+        supabase.from('bookings').select('final_amount').eq('status', 'confirmed'),
+        supabase.from('buses').select('id', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase
             .from('bookings')
             .select('id, booking_reference, final_amount, status, created_at, trip:trips(route:routes(origin,destination), bus:buses(name))')
@@ -29,23 +30,24 @@ export async function GET() {
             .limit(5),
     ])
 
-    if (bookingsRes.error) return NextResponse.json({ message: bookingsRes.error.message }, { status: 500 })
-    if (busesRes.error) return NextResponse.json({ message: busesRes.error.message }, { status: 500 })
-    if (usersRes.error) return NextResponse.json({ message: usersRes.error.message }, { status: 500 })
+    if (bookingsCountRes.error) return NextResponse.json({ message: bookingsCountRes.error.message }, { status: 500 })
+    if (confirmedBookingsRes.error) return NextResponse.json({ message: confirmedBookingsRes.error.message }, { status: 500 })
+    if (busesCountRes.error) return NextResponse.json({ message: busesCountRes.error.message }, { status: 500 })
+    if (usersCountRes.error) return NextResponse.json({ message: usersCountRes.error.message }, { status: 500 })
     if (bookingsListRes.error) return NextResponse.json({ message: bookingsListRes.error.message }, { status: 500 })
     if (tripsRes.error) return NextResponse.json({ message: tripsRes.error.message }, { status: 500 })
 
-    const bookings = (bookingsRes.data || []) as BookingMetricRow[]
-    const totalRevenue = bookings.reduce((sum, b) => sum + Number(b.final_amount || 0), 0)
-    const totalBookings = bookings.length
-    const confirmedBookings = bookings.filter((b) => b.status === 'confirmed').length
+    const totalBookings = bookingsCountRes.count || 0
+    const confirmedBookings = confirmedBookingsRes.data || []
+    const totalRevenue = confirmedBookings.reduce((sum, b) => sum + Number(b.final_amount || 0), 0)
+    const confirmedCount = confirmedBookings.length
 
     const stats = {
         totalBookings,
         totalRevenue,
-        activeBuses: busesRes.data?.length || 0,
-        totalUsers: usersRes.data?.length || 0,
-        confirmationRate: totalBookings ? Math.round((confirmedBookings / totalBookings) * 100) : 0,
+        activeBuses: busesCountRes.count || 0,
+        totalUsers: usersCountRes.count || 0,
+        confirmationRate: totalBookings ? Math.round((confirmedCount / totalBookings) * 100) : 0,
     }
 
     return NextResponse.json({

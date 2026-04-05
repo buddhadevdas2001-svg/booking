@@ -177,7 +177,7 @@ CREATE TABLE public.trips (
 -- BOOKINGS
 CREATE TABLE public.bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    booking_reference TEXT UNIQUE DEFAULT 'BK' || UPPER(SUBSTRING(MD5(random()::text) FOR 8)),
+    booking_reference TEXT UNIQUE DEFAULT 'BK' || UPPER(LEFT(REPLACE(gen_random_uuid()::text, '-', ''), 10)),
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     trip_id UUID REFERENCES public.trips(id) ON DELETE CASCADE,
     total_amount DECIMAL(10,2) NOT NULL,
@@ -228,7 +228,7 @@ CREATE TABLE public.seat_locks (
 -- PAYMENTS
 CREATE TABLE public.payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
+    booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE UNIQUE,
     transaction_id TEXT NOT NULL,
     gateway TEXT NOT NULL DEFAULT 'stripe',
     amount NUMERIC(10,2) NOT NULL,
@@ -362,8 +362,15 @@ CREATE INDEX idx_trips_departure_time ON public.trips(departure_time);
 CREATE INDEX idx_trips_route_id ON public.trips(route_id);
 CREATE INDEX idx_trips_bus_id ON public.trips(bus_id);
 CREATE INDEX idx_bookings_user_id ON public.bookings(user_id);
+CREATE INDEX idx_bookings_trip_id ON public.bookings(trip_id);
+CREATE INDEX idx_booking_seats_booking_id ON public.booking_seats(booking_id);
 CREATE INDEX idx_seat_locks_expires_at ON public.seat_locks(expires_at);
 CREATE INDEX idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX idx_profiles_role ON public.profiles(role);
+CREATE INDEX idx_routes_origin_destination ON public.routes(origin, destination);
+CREATE INDEX idx_seat_layouts_bus_id ON public.seat_layouts(bus_id);
+CREATE INDEX idx_trip_staff_trip_id ON public.trip_staff(trip_id);
+CREATE INDEX idx_trip_staff_staff_id ON public.trip_staff(staff_id);
 
 -- =====================================================
 -- 5. VIEWS
@@ -427,12 +434,17 @@ ALTER TABLE public.pricing_logs ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
+    -- Check JWT metadata first (fastest)
+    IF (auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'agent') THEN
+        RETURN TRUE;
+    END IF;
+    -- Fallback to profiles table if metadata isn't set (SECURITY DEFINER bypasses RLS)
     RETURN EXISTS (
         SELECT 1 FROM public.profiles
-        WHERE id = auth.uid() AND role = 'admin'
+        WHERE id = auth.uid() AND role IN ('admin', 'agent')
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Auto-create profile on new auth user
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -474,6 +486,16 @@ CREATE POLICY "Admin can manage buses" ON public.buses FOR ALL USING (public.is_
 DROP POLICY IF EXISTS "Anyone can view trips" ON public.trips;
 CREATE POLICY "Anyone can view trips" ON public.trips FOR SELECT USING (status != 'cancelled');
 
+DROP POLICY IF EXISTS "Anyone can view routes" ON public.routes;
+DROP POLICY IF EXISTS "Anyone can view active routes" ON public.routes;
+CREATE POLICY "Anyone can view routes" ON public.routes FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Anyone can view active seat layouts" ON public.seat_layouts;
+CREATE POLICY "Anyone can view active seat layouts" ON public.seat_layouts FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Anyone can view active coupons" ON public.coupons;
+CREATE POLICY "Anyone can view active coupons" ON public.coupons FOR SELECT USING (is_active = true);
+
 -- Offers visibility + management
 ALTER TABLE public.offers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Anyone can view active offers" ON public.offers;
@@ -486,19 +508,24 @@ CREATE POLICY "Admin can manage offers" ON public.offers FOR ALL USING (public.i
 DROP POLICY IF EXISTS "Users can view own bookings" ON public.bookings;
 CREATE POLICY "Users can view own bookings" ON public.bookings FOR SELECT USING (user_id = auth.uid() OR public.is_admin());
 
-DROP POLICY IF EXISTS "Users can create own bookings" ON public.bookings;
-CREATE POLICY "Users can create own bookings" ON public.bookings FOR INSERT WITH CHECK (user_id = auth.uid() OR public.is_admin());
+CREATE POLICY "Users can create own bookings" ON public.bookings FOR INSERT WITH CHECK (
+    (user_id = auth.uid()) OR (public.is_admin())
+);
 
-DROP POLICY IF EXISTS "Users can update own bookings" ON public.bookings;
-CREATE POLICY "Users can update own bookings" ON public.bookings FOR UPDATE USING (user_id = auth.uid() OR public.is_admin());
+CREATE POLICY "Users can update own bookings" ON public.bookings FOR UPDATE USING (
+    (user_id = auth.uid()) OR (public.is_admin())
+);
 
 DROP POLICY IF EXISTS "Users can delete own bookings" ON public.bookings;
 CREATE POLICY "Users can delete own bookings" ON public.bookings FOR DELETE USING (user_id = auth.uid() OR public.is_admin());
 
 -- BOOKING SEATS RLS
-DROP POLICY IF EXISTS "Users can view booking seats for own bookings" ON public.booking_seats;
 CREATE POLICY "Users can view booking seats for own bookings" ON public.booking_seats FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.bookings b WHERE b.id = booking_id AND (b.user_id = auth.uid() OR public.is_admin()))
+    EXISTS (
+        SELECT 1 FROM public.bookings b 
+        WHERE b.id = public.booking_seats.booking_id 
+        AND (b.user_id = auth.uid() OR public.is_admin())
+    )
 );
 
 DROP POLICY IF EXISTS "Users can create booking seats for own bookings" ON public.booking_seats;

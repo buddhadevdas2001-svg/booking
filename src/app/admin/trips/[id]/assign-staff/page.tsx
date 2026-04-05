@@ -74,32 +74,41 @@ export default function AssignStaffPage({ params }: { params: Promise<{ id: stri
             const res = await fetch('/api/admin/staff')
             if (!res.ok) throw new Error('Failed to fetch available staff')
             const allStaff = (await res.json()) as StaffMember[]
-            return allStaff.filter(s => s.is_active !== false)
+            return allStaff
         }
     })
 
     const assignMutation = useMutation({
         mutationFn: async (staffId: string) => {
-            const supabase = createClient()
-            const { error } = await supabase.from('trip_staff').insert({
-                trip_id: id,
-                staff_id: staffId,
-                role: selectedRole
-            } as never)
-            if (error) throw error
+            const res = await fetch(`/api/admin/trips/${id}/staff`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ staff_id: staffId, role: selectedRole })
+            });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(body.error || 'Failed to assign staff');
+            }
         },
         onSuccess: () => {
             toast.success('Staff assigned successfully')
             queryClient.invalidateQueries({ queryKey: ['trip-staff', id] })
         },
-        onError: (err: unknown) => toast.error(err instanceof Error ? err.message : 'Failed to assign staff')
+        onError: (err: unknown) => {
+            console.error('STAFF ASSIGNMENT ERROR:', err)
+            toast.error(err instanceof Error ? err.message : 'Failed to assign staff')
+        },
     })
 
     const removeMutation = useMutation({
         mutationFn: async (assignmentId: string) => {
-            const supabase = createClient()
-            const { error } = await supabase.from('trip_staff').delete().eq('id', assignmentId)
-            if (error) throw error
+            const res = await fetch(`/api/admin/trips/${id}/staff?assignmentId=${assignmentId}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(body.error || 'Failed to remove staff');
+            }
         },
         onSuccess: () => {
             toast.success('Staff removed from trip')
@@ -199,7 +208,7 @@ export default function AssignStaffPage({ params }: { params: Promise<{ id: stri
                             placeholder="Search available staff..." 
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="input pl-9 text-sm"
+                            className="input input-with-icon text-sm"
                         />
                     </div>
 

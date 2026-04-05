@@ -3,6 +3,7 @@ import type {
     Booking,
     BookingSeat,
     Bus,
+    PassengerDetail,
     Profile,
     Route,
     SearchTrip,
@@ -14,6 +15,9 @@ import type {
 } from '@/types/supabase'
 import { createClient } from '@/lib/supabase/client'
 
+type PassengerBySeat = Record<string, { name?: string; age?: number }>
+type PendingSeatSelection = { seat_label: string }
+
 export async function getCurrentProfile() {
     const supabase = createClient()
     const {
@@ -24,7 +28,7 @@ export async function getCurrentProfile() {
     if (authError) throw authError
     if (!user) return null
 
-    const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
     
     if (error || !profile) {
         return {
@@ -70,46 +74,41 @@ export async function createPendingBooking(input: {
     tripId: string
     totalAmount: number
     finalAmount: number
-    passengerDetails: Booking['passenger_details']
+    passengerDetails: PassengerDetail[]
     contactEmail: string
     contactPhone: string
-    bookingSeats: Array<Pick<BookingSeat, 'seat_label' | 'passenger_name' | 'passenger_age' | 'price'>>
-}): Promise<Booking> {
-    const supabase = createClient()
+    bookingSeats: PendingSeatSelection[]
+    couponCode?: string
+}): Promise<{ id: string }> {
+    const res = await fetch('/api/checkout/create-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            userId: input.userId,
+            tripId: input.tripId,
+            selectedSeats: input.bookingSeats.map((seat) => ({
+                id: seat.seat_label, // mapped by UI as id internally
+                label: seat.seat_label,
+            })),
+            passengerDetails: input.passengerDetails.reduce<PassengerBySeat>((acc, passenger) => {
+                const seatLabel = passenger.seat_label
+                if (!seatLabel) return acc
+                acc[seatLabel] = { name: passenger.name, age: passenger.age }
+                return acc
+            }, {}),
+            contactEmail: input.contactEmail,
+            contactPhone: input.contactPhone,
+            couponCode: input.couponCode,
+        })
+    })
 
-    const { data: booking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-            user_id: input.userId,
-            trip_id: input.tripId,
-            total_amount: input.totalAmount,
-            final_amount: input.finalAmount,
-            passenger_details: input.passengerDetails,
-            contact_email: input.contactEmail,
-            contact_phone: input.contactPhone,
-            status: 'pending',
-            payment_status: 'pending',
-        } as never)
-        .select()
-        .single()
-
-    if (bookingError) throw bookingError
-    const createdBooking = booking as unknown as Booking
-
-    const { error: seatError } = await supabase.from('booking_seats').insert(
-        input.bookingSeats.map((seat) => ({
-            booking_id: createdBooking.id,
-            seat_label: seat.seat_label,
-            passenger_name: seat.passenger_name,
-            passenger_age: seat.passenger_age,
-            price: seat.price,
-            status: 'confirmed',
-        })) as never
-    )
-
-    if (seatError) throw seatError
-
-    return createdBooking
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+        throw new Error(data?.message || 'Failed to create pending booking')
+    }
+    
+    // The previous code returned the full booking object, but UI only needs `id`.
+    return { id: data.bookingId }
 }
 
 export async function lockSeats(input: {
@@ -150,41 +149,16 @@ export async function unlockSeat(tripId: string, seatLabel: string, sessionId: s
 }
 
 export async function getMyBookings(statusFilter?: string) {
-    const supabase = createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) return []
-
-    let query = supabase
-        .from('bookings')
-        .select(`
-            *,
-            trip:trips(
-                *,
-                route:routes(*),
-                bus:buses(*)
-            ),
-            booking_seats(*)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-    if (statusFilter === 'confirmed') {
-        query = query.eq('status', 'confirmed')
-    } else if (statusFilter === 'cancelled') {
-        query = query.eq('status', 'cancelled')
-    } else if (statusFilter === 'upcoming') {
-        const tomorrow = new Date()
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        query = query.eq('status', 'confirmed').gte('trip.departure_time', tomorrow.toISOString())
+    const url = new URL('/api/bookings/my', window.location.origin)
+    if (statusFilter && statusFilter !== 'all') {
+        url.searchParams.set('status', statusFilter)
     }
-
-    const { data, error } = await query
-
-    if (error) throw error
-    return (data || []) as Booking[]
+    const res = await fetch(url.toString())
+    if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.message || 'Failed to fetch bookings')
+    }
+    return res.json() as Promise<Booking[]>
 }
 
 

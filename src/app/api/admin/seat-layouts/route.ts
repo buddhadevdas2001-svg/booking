@@ -7,7 +7,15 @@ export async function GET() {
     if (!auth.ok) return auth.response
     try {
         const supabase = createAdminClient()
-        const { data, error } = await supabase.from('seat_layouts').select('*').order('updated_at', { ascending: false })
+        const { data, error } = await supabase
+            .from('seat_layouts')
+            .select(`
+                *,
+                buses (
+                    name
+                )
+            `)
+            .order('updated_at', { ascending: false })
         if (error) throw error
         return NextResponse.json(data)
     } catch (err) {

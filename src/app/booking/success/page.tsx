@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -13,9 +13,10 @@ import {
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/common/Navbar'
+import { useBookingStore } from '@/store'
 import type { Booking, BookingSeat, Bus as BusType, PassengerDetail, Route as RouteType, Trip as TripType } from '@/types/supabase'
+import { generateETicketPDF } from '@/lib/generateETicketPDF'
 
 type BookingDetail = Booking & {
   trip?: TripType & { route?: RouteType; bus?: BusType }
@@ -28,6 +29,8 @@ function BookingSuccessContent() {
   const searchParams = useSearchParams()
   const bookingId = searchParams.get('booking_id')
   const sessionId = searchParams.get('session_id')
+  const { clearSeats } = useBookingStore()
+  const [pdfLoading, setPdfLoading] = useState(false)
 
   const { data: booking, isLoading } = useQuery<BookingDetail>({
     queryKey: ['booking-success', bookingId, sessionId],
@@ -39,30 +42,40 @@ function BookingSuccessContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ bookingId, sessionId }),
         })
-        if (!confirmRes.ok && confirmRes.status !== 409) {
+        
+        if (!confirmRes.ok) {
           const data = await confirmRes.json().catch(() => null)
+          // Throw 409 specifically to trigger the retry logic
+          if (confirmRes.status === 409) {
+            throw new Error('409: Payment still processing')
+          }
           throw new Error(data?.message || 'Failed to verify payment status')
         }
       }
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          trip:trips(
-            *,
-            route:routes(*),
-            bus:buses(*)
-          ),
-          booking_seats(*)
-        `)
-        .eq('id', bookingId)
-        .single()
-      if (error) throw error
-      return data as BookingDetail
+      // Use our API (admin client) so RLS never blocks route/bus joins
+      const res = await fetch(`/api/bookings/${bookingId}`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.message || 'Failed to load booking')
+      }
+      return res.json() as Promise<BookingDetail>
     },
     enabled: !!bookingId,
+    retry: (failureCount, error: unknown) => {
+      // Retry if payment is pending (409) up to 10 times (20 seconds total)
+      const message =
+        typeof error === 'object' && error && 'message' in error ? String((error as { message?: unknown }).message) : ''
+      if (message.includes('404') || message.includes('409')) return failureCount < 10
+      return false
+    },
+    retryDelay: 2000,
   })
+
+  useEffect(() => {
+    if (booking?.status === 'confirmed') {
+      clearSeats()
+    }
+  }, [booking?.status, clearSeats])
 
   useEffect(() => {
     if (!bookingId && !isLoading) router.push('/dashboard')
@@ -88,13 +101,34 @@ function BookingSuccessContent() {
     seats: booking.booking_seats?.map((s) => s.seat_label),
   })
 
-  const dep = booking.trip?.departure_time
-  const arr = booking.trip?.arrival_time
+  // Handle Supabase potentially returning these as arrays or objects
+  const rawTrip = Array.isArray(booking.trip) ? booking.trip[0] : booking.trip
+  const trip = rawTrip as (TripType & { route?: RouteType | RouteType[]; bus?: BusType | BusType[] }) | undefined
+  
+  const route = Array.isArray(trip?.route) ? trip?.route[0] : trip?.route
+  const bus = Array.isArray(trip?.bus) ? trip?.bus[0] : trip?.bus
+
+  const dep = trip?.departure_time
+  const arr = trip?.arrival_time
   const passengers = Array.isArray(booking.passenger_details) ? booking.passenger_details as PassengerDetail[] : []
 
   const handlePrint = () => window.print()
-  const handleDownload = () => {
-    window.print() // browser native print-to-PDF
+  const handleDownload = async () => {
+    if (!booking) return
+    setPdfLoading(true)
+    try {
+      await generateETicketPDF(
+        booking as any,
+        route || {},
+        bus || {},
+        trip || {},
+        qrPayload
+      )
+    } catch (err) {
+      console.error('PDF generation failed:', err)
+    } finally {
+      setPdfLoading(false)
+    }
   }
 
   return (
@@ -162,7 +196,7 @@ function BookingSuccessContent() {
                 <Box>
                   <Typography variant="h6" sx={{ fontWeight: 900 }}>E-TICKET</Typography>
                   <Typography variant="caption" sx={{ color: alpha('#fff', 0.8), fontWeight: 700 }}>
-                    {booking.trip?.bus?.name} · {booking.trip?.bus?.bus_type}
+                    {bus?.name} · {bus?.bus_type}
                   </Typography>
                 </Box>
               </Stack>
@@ -187,7 +221,7 @@ function BookingSuccessContent() {
                   From
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>
-                  {booking.trip?.route?.origin}
+                  {route?.origin}
                 </Typography>
                 {dep && (
                   <Box sx={{ mt: 1 }}>
@@ -214,7 +248,7 @@ function BookingSuccessContent() {
                   To
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5 }}>
-                  {booking.trip?.route?.destination}
+                  {route?.destination}
                 </Typography>
                 {arr && (
                   <Box sx={{ mt: 1 }}>
@@ -367,8 +401,14 @@ function BookingSuccessContent() {
           <Button variant="outlined" startIcon={<Printer size={18} />} onClick={handlePrint} sx={{ borderRadius: 4, fontWeight: 700, px: 4 }}>
             Print Ticket
           </Button>
-          <Button variant="outlined" startIcon={<Download size={18} />} onClick={handleDownload} sx={{ borderRadius: 4, fontWeight: 700, px: 4 }}>
-            Download PDF
+          <Button
+            variant="outlined"
+            startIcon={pdfLoading ? <div style={{ width: 16, height: 16, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : <Download size={18} />}
+            onClick={handleDownload}
+            disabled={pdfLoading}
+            sx={{ borderRadius: 4, fontWeight: 700, px: 4 }}
+          >
+            {pdfLoading ? 'Generating...' : 'Download PDF'}
           </Button>
           <Button variant="contained" startIcon={<Ticket size={18} />} component={Link} href="/dashboard" sx={{ borderRadius: 4, fontWeight: 800, px: 4 }}>
             My Bookings

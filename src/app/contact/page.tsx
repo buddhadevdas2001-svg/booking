@@ -34,24 +34,24 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <Toaster />
       <Navbar />
       <main className="pt-28 pb-16">
         <div className="section-shell mx-auto max-w-4xl">
           <header className="rounded-3xl overflow-hidden bg-gradient-to-r from-blue-600 to-blue-400 text-white p-10 shadow-lg">
             <h1 className="text-3xl md:text-4xl font-extrabold">Get in touch</h1>
-            <p className="mt-2 text-white/90">We're here to help — reach out for support, partnerships, or feedback.</p>
+            <p className="mt-2 text-white/90">We&apos;re here to help — reach out for support, partnerships, or feedback.</p>
           </header>
 
           <div className="mt-8 grid gap-6 md:grid-cols-2">
             <div className="card">
               <h2 className="text-xl font-semibold">Contact Options</h2>
-              <p className="mt-3 text-slate-600">Phone: <a href="tel:+919876543210" className="text-blue-600">+91 98765 43210</a></p>
-              <p className="mt-1 text-slate-600">Email: <a href="mailto:support@voyatra.com" className="text-blue-600">support@voyatra.com</a></p>
+              <p className="mt-3 text-slate-500 dark:text-slate-400">Phone: <a href="tel:+919876543210" className="text-blue-500">+91 98765 43210</a></p>
+              <p className="mt-1 text-slate-500 dark:text-slate-400">Email: <a href="mailto:support@voyatra.com" className="text-blue-500">support@voyatra.com</a></p>
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-slate-700">Office</h3>
-                <p className="mt-1 text-slate-600">123 Main Street, Mumbai, Maharashtra, India</p>
+                <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Office</h3>
+                <p className="mt-1 text-slate-500 dark:text-slate-400">123 Main Street, Mumbai, Maharashtra, India</p>
               </div>
             </div>
 
@@ -108,7 +108,7 @@ export default function ContactPage() {
             </div>
           </div>
 
-          <div className="mt-8 text-sm text-slate-500">We aim to respond within 24 hours.</div>
+          <div className="mt-8 text-sm text-slate-400">We aim to respond within 24 hours.</div>
         </div>
       </main>
     </div>

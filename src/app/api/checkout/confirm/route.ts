@@ -3,8 +3,8 @@ import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { BookingStatus, PaymentStatus } from '@/types/supabase'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2026-03-25.dahlia',
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+    apiVersion: '2025-01-27.acacia' as Stripe.LatestApiVersion,
 })
 
 type ConfirmableBooking = {
@@ -41,9 +41,11 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: 'Checkout session does not match booking' }, { status: 400 })
         }
 
+        console.log(`Confirming booking: ${bookingId} with session: ${sessionId}`)
         const session = await stripe.checkout.sessions.retrieve(sessionId, {
             expand: ['payment_intent'],
         })
+        console.log('Stripe session retrieved:', session.id, 'status:', session.status, 'payment:', session.payment_status)
 
         if (session.metadata?.bookingId !== bookingId) {
             return NextResponse.json({ message: 'Checkout session metadata mismatch' }, { status: 400 })
@@ -98,19 +100,15 @@ export async function POST(req: NextRequest) {
             },
         }
 
-        const { data: existingPayment } = await supabase
+        const { error: paymentError } = await supabase
             .from('payments')
-            .select('id')
-            .eq('booking_id', bookingId)
-            .maybeSingle()
+            .upsert(paymentPayload as never, { 
+                onConflict: 'booking_id',
+                ignoreDuplicates: false 
+            })
 
-        if (existingPayment?.id) {
-            await supabase
-                .from('payments')
-                .update(paymentPayload as never)
-                .eq('id', existingPayment.id)
-        } else {
-            await supabase.from('payments').insert(paymentPayload as never)
+        if (paymentError) {
+            console.warn('Payment record upsert warning:', paymentError.message)
         }
 
         return NextResponse.json({

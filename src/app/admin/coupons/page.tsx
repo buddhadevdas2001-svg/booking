@@ -53,7 +53,7 @@ export default function AdminCouponsPage() {
       toast.success('Coupon deleted successfully')
       queryClient.invalidateQueries({ queryKey: ['admin-coupons'] })
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const toggleStatusMutation = useMutation({
@@ -69,7 +69,7 @@ export default function AdminCouponsPage() {
       toast.success('Status updated')
       queryClient.invalidateQueries({ queryKey: ['admin-coupons'] })
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const filteredCoupons = coupons.filter(c => 
@@ -117,7 +117,7 @@ export default function AdminCouponsPage() {
       {isLoading ? (
         <Grid container spacing={3}>
           {[1, 2, 3].map(i => (
-            <Grid item xs={12} md={6} lg={4} key={i}>
+            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={i}>
               <Skeleton variant="rectangular" height={220} sx={{ borderRadius: 6 }} />
             </Grid>
           ))}
@@ -136,7 +136,7 @@ export default function AdminCouponsPage() {
             const active = coupon.is_active && !expired
 
             return (
-              <Grid item xs={12} md={6} lg={4} key={coupon.id}>
+              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={coupon.id}>
                 <Card sx={{ height: '100%', position: 'relative', overflow: 'visible' }}>
                   <CardContent sx={{ p: 3 }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
@@ -172,19 +172,19 @@ export default function AdminCouponsPage() {
                     <Divider sx={{ my: 2, borderStyle: 'dashed' }} />
 
                     <Grid container spacing={2}>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Discount</Typography>
                         <Typography variant="body1" sx={{ fontWeight: 800 }}>
                           {coupon.discount_type === 'percentage' ? `${coupon.discount_value}% OFF` : `₹${coupon.discount_value} OFF`}
                         </Typography>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Usage</Typography>
                         <Typography variant="body1" sx={{ fontWeight: 800 }}>
                           {coupon.used_count} / {coupon.usage_limit || '∞'}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12}>
+                      <Grid size={{ xs: 12 }}>
                         <Stack direction="row" alignItems="center" spacing={1} sx={{ color: 'text.secondary' }}>
                           <Clock size={14} />
                           <Typography variant="caption" sx={{ fontWeight: 600 }}>

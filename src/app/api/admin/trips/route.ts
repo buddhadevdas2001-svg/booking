@@ -7,9 +7,11 @@ export async function GET() {
     if (!auth.ok) return auth.response
     try {
         const supabase = createAdminClient()
+        const nowUtc = new Date().toISOString()
         const { data, error } = await supabase
             .from('trips')
             .select('*, route:routes(*), bus:buses(*)')
+            .gt('departure_time', nowUtc)
             .order('departure_time', { ascending: true })
         if (error) throw error
         return NextResponse.json(data)

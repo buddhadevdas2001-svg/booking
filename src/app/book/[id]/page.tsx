@@ -50,7 +50,6 @@ export default function SeatSelectionPage({ params }: { params: Promise<{ id: st
   const router = useRouter()
   const theme = useTheme()
   const searchParams = useSearchParams()
-  const passengerCount = parseInt(searchParams.get('passengers') || '1')
   const { user } = useAuthStore()
   const { tripId: activeTripId, selectedSeats, toggleSeat, clearSeats, setLockedSeats, setSessionId, sessionId, setTripId } = useBookingStore()
   const [selectedDeck, setSelectedDeck] = useState<'lower' | 'upper'>('lower')
@@ -183,8 +182,8 @@ export default function SeatSelectionPage({ params }: { params: Promise<{ id: st
         key={seat.id}
         onClick={async () => {
           if (isBooked || isLockedByAnotherUser) return
-          if (!isSelected && selectedSeats.length >= passengerCount) {
-            toast.error(`Limit: ${passengerCount} seats`)
+          if (!isSelected && selectedSeats.length >= 6) {
+            toast.error(`Limit: 6 seats`)
             return
           }
           
@@ -414,7 +413,7 @@ export default function SeatSelectionPage({ params }: { params: Promise<{ id: st
                 >
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: pricingBadge ? 1.5 : 3 }}>
                     <Typography variant="h6" sx={{ fontWeight: 800 }}>Booking Summary</Typography>
-                    <Chip label={`${selectedSeats.length}/${passengerCount}`} size="small" color="primary" sx={{ fontWeight: 800 }} />
+                    <Chip label={`${selectedSeats.length} Seats`} size="small" color="primary" sx={{ fontWeight: 800 }} />
                   </Stack>
 
                   {pricingBadge && (
@@ -474,7 +473,7 @@ export default function SeatSelectionPage({ params }: { params: Promise<{ id: st
                         variant="contained"
                         size="large"
                         fullWidth
-                        disabled={selectedSeats.length === 0 || selectedSeats.length > passengerCount}
+                        disabled={selectedSeats.length === 0 || selectedSeats.length > 6}
                         endIcon={<ChevronRight size={18} />}
                         sx={{
                           py: 2,
@@ -483,8 +482,8 @@ export default function SeatSelectionPage({ params }: { params: Promise<{ id: st
                           boxShadow: theme.shadows[4],
                         }}
                       >
-                        {selectedSeats.length < passengerCount 
-                          ? `Select ${passengerCount - selectedSeats.length} More` 
+                        {selectedSeats.length === 0
+                          ? `Select at least 1 seat` 
                           : 'Confirm Booking'}
                       </Button>
                     </Stack>

@@ -67,7 +67,7 @@ export default function AdminBusesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, registration, or type..."
-              className="input bg-slate-900/70 pl-10 text-white placeholder:text-slate-500"
+              className="input input-with-icon bg-slate-900/70 text-white placeholder:text-slate-500"
             />
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-400">

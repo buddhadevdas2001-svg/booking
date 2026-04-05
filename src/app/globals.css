@@ -11,6 +11,13 @@
   --border: #e2e8f0;
 }
 
+[data-theme="dark"] {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --surface: #1e293b;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -59,11 +66,11 @@ textarea {
 }
 
 ::-webkit-scrollbar-track {
-  background: #edf2f7;
+  background: var(--surface);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c3d1ee;
+  background: var(--border);
   border-radius: 999px;
 }
 
@@ -107,6 +114,10 @@ textarea {
   @apply rounded-xl border border-slate-200 bg-white px-5 py-3 font-semibold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50;
 }
 
+[data-theme="dark"] .btn-secondary {
+  @apply border-white/10 bg-white/8 text-slate-200 hover:border-white/20 hover:bg-white/12;
+}
+
 .btn-outline {
   @apply rounded-xl border-2 border-blue-500 bg-transparent px-5 py-3 font-medium text-blue-600 transition-all duration-300 hover:bg-blue-50;
 }
@@ -119,16 +130,36 @@ textarea {
   @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6;
 }
 
+[data-theme="dark"] .card {
+  @apply border-white/8 bg-slate-800/60 shadow-none;
+}
+
 .card-hover {
   @apply cursor-pointer rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
 }
 
+[data-theme="dark"] .card-hover {
+  @apply border-white/8 bg-slate-800/60 hover:border-blue-400/30;
+}
+
 .input {
-  @apply min-w-0 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition-all duration-300 placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100;
+  @apply min-w-0 w-full rounded-xl border border-slate-200 bg-white px-5 py-3 text-slate-900 outline-none transition-all duration-300 placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100;
+}
+
+.input-with-icon {
+  @apply pl-12;
+}
+
+[data-theme="dark"] .input {
+  @apply border-white/10 bg-slate-800/60 text-slate-100 placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-blue-500/20;
 }
 
 .label {
   @apply mb-2 block text-sm font-medium text-slate-600;
+}
+
+[data-theme="dark"] .label {
+  @apply text-slate-400;
 }
 
 .badge {
@@ -183,8 +214,16 @@ textarea {
   @apply text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl lg:text-5xl;
 }
 
+[data-theme="dark"] .section-title {
+  @apply text-slate-100;
+}
+
 .page-header {
   @apply mb-8 flex flex-col gap-4 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between;
+}
+
+[data-theme="dark"] .page-header {
+  @apply border-white/8;
 }
 
 .surface-grid {
@@ -193,6 +232,10 @@ textarea {
 
 .table-shell {
   @apply overflow-hidden rounded-2xl border border-slate-200 bg-white;
+}
+
+[data-theme="dark"] .table-shell {
+  @apply border-white/8 bg-slate-800/60;
 }
 
 .table-scroll {
@@ -253,5 +296,5 @@ textarea {
 }
 
 .auth-input {
-  @apply min-w-0 w-full rounded-xl border border-white/18 bg-white/6 px-4 py-3 text-white outline-none transition-all duration-300 placeholder:text-slate-300 focus:border-blue-400/80 focus:bg-white/12 focus:ring-2 focus:ring-blue-500/20;
+  @apply min-w-0 w-full rounded-xl border border-white/10 bg-white/5 pl-12 pr-4 py-3.5 text-white outline-none transition-all duration-300 placeholder:text-slate-400 focus:border-blue-400/80 focus:bg-white/10 focus:ring-4 focus:ring-blue-500/10;
 }

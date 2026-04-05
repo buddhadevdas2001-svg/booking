@@ -30,33 +30,39 @@ interface BookingState {
     setSessionId: (sessionId: string) => void
     isSeatLocked: (seatLabel: string) => boolean
 }
-export const useBookingStore = create<BookingState>((set, get) => ({
-    tripId: null,
-    selectedSeats: [],
-    lockedSeats: [],
-    sessionId: '',
-    setTripId: (tripId) =>
-        set((state) => (
-            state.tripId === tripId
-                ? { tripId }
-                : { tripId, selectedSeats: [], lockedSeats: [] }
-        )),
-    toggleSeat: (seat) =>
-        set((state) => {
-            const exists = state.selectedSeats.find((s) => s.label === seat.label)
-            return {
-                selectedSeats: exists
-                    ? state.selectedSeats.filter((s) => s.label !== seat.label)
-                    : [...state.selectedSeats, seat],
-            }
+export const useBookingStore = create<BookingState>()(
+    persist(
+        (set, get) => ({
+            tripId: null,
+            selectedSeats: [],
+            lockedSeats: [],
+            sessionId: '',
+            setTripId: (tripId) =>
+                set((state) => (
+                    state.tripId === tripId
+                        ? { tripId }
+                        : { tripId, selectedSeats: [], lockedSeats: [] }
+                )),
+            toggleSeat: (seat) =>
+                set((state) => {
+                    const exists = state.selectedSeats.find((s) => s.label === seat.label)
+                    return {
+                        selectedSeats: exists
+                            ? state.selectedSeats.filter((s) => s.label !== seat.label)
+                            : [...state.selectedSeats, seat],
+                    }
+                }),
+            clearSeats: () => set({ selectedSeats: [], tripId: null, lockedSeats: [] }),
+            setLockedSeats: (seats) =>
+                set((state) => ({
+                    lockedSeats: typeof seats === 'function' ? seats(state.lockedSeats) : seats,
+                })),
+            setSessionId: (sessionId) => set({ sessionId }),
+            isSeatLocked: (seatLabel) => get().lockedSeats.includes(seatLabel),
         }),
-    clearSeats: () => set({ selectedSeats: [], tripId: null, lockedSeats: [] }),
-    setLockedSeats: (seats) => set((state) => ({
-        lockedSeats: typeof seats === 'function' ? seats(state.lockedSeats) : seats
-    })),
-    setSessionId: (sessionId) => set({ sessionId }),
-    isSeatLocked: (seatLabel) => get().lockedSeats.includes(seatLabel),
-}))
+        { name: 'booking-store' }
+    )
+)
 
 // Theme Store
 interface ThemeState {

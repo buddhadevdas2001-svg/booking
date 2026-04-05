@@ -1,5 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  // Use admin client so RLS never blocks the route/bus joins
+  const supabase = createAdminClient()
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      trip:trips(
+        *,
+        route:routes(*),
+        bus:buses(*)
+      ),
+      booking_seats(*)
+    `)
+    .eq('id', id)
+    .single()
+
+  if (error || !data) {
+    return NextResponse.json({ message: 'Booking not found' }, { status: 404 })
+  }
+  return NextResponse.json(data)
+}
 
 export async function POST(
   request: NextRequest,

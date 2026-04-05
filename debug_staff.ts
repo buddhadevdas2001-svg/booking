@@ -21,8 +21,8 @@ async function debug() {
         id: s.id,
         empId: s.employee_id,
         userId: s.user_id,
-        name: (s as any).profile?.full_name || 'NULL',
-        phone: (s as any).profile?.phone || 'NULL'
+        name: (s as unknown as { profile?: { full_name?: string } }).profile?.full_name || 'NULL',
+        phone: (s as unknown as { profile?: { phone?: string } }).profile?.phone || 'NULL'
     })))
 }
 

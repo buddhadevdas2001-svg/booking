@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import type { BookingSeat } from '@/types/supabase'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2026-03-25.dahlia',
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+    apiVersion: '2025-01-27.acacia' as Stripe.LatestApiVersion,
 })
 
 type CheckoutBooking = {
@@ -26,6 +27,16 @@ type CheckoutBooking = {
 
 export async function POST(req: NextRequest) {
     try {
+        const userSupabase = await createServerClient()
+        const {
+            data: { user },
+            error: authError,
+        } = await userSupabase.auth.getUser()
+
+        if (authError || !user) {
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+        }
+
         const { bookingId } = await req.json()
 
         if (!bookingId) {
@@ -54,7 +65,12 @@ export async function POST(req: NextRequest) {
         }
 
         const bookingData = booking as CheckoutBooking
+        if (bookingData.user_id !== user.id) {
+            return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
+        }
 
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        
         // Create Stripe Checkout Session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -72,12 +88,13 @@ export async function POST(req: NextRequest) {
                 },
             ],
             mode: 'payment',
-            success_url: `${process.env.NEXT_PUBLIC_APP_URL}/booking/success?booking_id=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/${bookingData.trip_id}`,
+            success_url: `${baseUrl}/booking/success?booking_id=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${baseUrl}/checkout/${bookingData.trip_id}`,
             metadata: {
                 bookingId: bookingData.id,
                 tripId: bookingData.trip_id,
                 userId: bookingData.user_id,
+                seat_labels: JSON.stringify(bookingData.booking_seats.map((seat) => seat.seat_label)),
             },
         })
 

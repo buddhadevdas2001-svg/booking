@@ -14,7 +14,7 @@ export async function GET() {
         if (routesError) throw routesError
 
         const processedRoutes = (routesData || []).map(route => {
-            const prices = (route.trips as any[] || [])
+            const prices = ((route.trips as Array<{ base_price: string | number }>) || [])
                 .map(t => Number(t.base_price))
                 .filter(p => !isNaN(p) && p > 0);
             

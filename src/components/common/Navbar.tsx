@@ -254,6 +254,11 @@ export default function Navbar() {
                     <MenuItem component={Link} href="/dashboard" onClick={handleUserMenuClose}>
                       Dashboard
                     </MenuItem>
+                    {(user.role === 'admin' || user.role === 'agent') && (
+                      <MenuItem component={Link} href="/admin" onClick={handleUserMenuClose} sx={{ color: 'primary.main', fontWeight: 600 }}>
+                        Admin Panel
+                      </MenuItem>
+                    )}
                     <MenuItem component={Link} href="/dashboard/bookings" onClick={handleUserMenuClose}>
                       My Bookings
                     </MenuItem>
@@ -387,6 +392,24 @@ export default function Navbar() {
               </ListItem>
             )
           })}
+          {user && (user.role === 'admin' || user.role === 'agent') && (
+            <ListItem disablePadding sx={{ mb: 1 }}>
+              <ListItemButton
+                component={Link}
+                href="/admin"
+                onClick={() => setMobileOpen(false)}
+                sx={{ borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.05) }}
+              >
+                <ListItemIcon sx={{ minWidth: 40, color: 'primary.main' }}>
+                  <ChevronRight size={20} />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Admin Panel"
+                  primaryTypographyProps={{ fontWeight: 800, fontSize: '1.1rem', color: 'primary.main' }}
+                />
+              </ListItemButton>
+            </ListItem>
+          )}
         </List>
 
         <Box sx={{ mt: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>

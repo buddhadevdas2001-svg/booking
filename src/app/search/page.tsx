@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Bus as BusIcon,
   Calendar,
+  Clock,
   Coffee,
   Filter,
   MapPin,
@@ -49,7 +50,6 @@ function SearchContent() {
   const from = searchParams.get('from') || ''
   const to = searchParams.get('to') || ''
   const date = searchParams.get('date') || ''
-  const passengers = searchParams.get('passengers') || '1'
 
   const [filters, setFilters] = useState({
     busType: 'all',
@@ -362,18 +362,21 @@ function SearchContent() {
                   </Paper>
                 ) : (
                   <Stack spacing={3}>
-                    {filteredTrips?.map((trip) => (
+                    {filteredTrips?.map((trip) => {
+                      const isDeparted = new Date(trip.departure_time) <= new Date()
+                      return (
                       <Paper
                         key={trip.id}
                         elevation={0}
                         sx={{
                           borderRadius: 1,
                           border: '1px solid',
-                          borderColor: 'divider',
-                          bgcolor: 'background.paper',
+                          borderColor: isDeparted ? alpha(theme.palette.error.main, 0.3) : 'divider',
+                          bgcolor: isDeparted ? alpha(theme.palette.error.main, 0.02) : 'background.paper',
                           overflow: 'hidden',
+                          opacity: isDeparted ? 0.75 : 1,
                           transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                          '&:hover': {
+                          '&:hover': isDeparted ? {} : {
                             transform: 'translateY(-4px)',
                             boxShadow: theme.shadows[8],
                             borderColor: 'primary.main',
@@ -385,7 +388,7 @@ function SearchContent() {
                             <Stack spacing={3}>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <Box>
-                                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1.5 }}>
+                                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1.5 }} flexWrap="wrap">
                                     <Typography variant="h5" sx={{ fontWeight: 900 }} noWrap>
                                       {trip.bus?.name}
                                     </Typography>
@@ -400,9 +403,24 @@ function SearchContent() {
                                         letterSpacing: '0.05em',
                                       }}
                                     />
+                                    {isDeparted && (
+                                      <Chip
+                                        icon={<Clock size={13} />}
+                                        label="Bus Departed"
+                                        size="small"
+                                        sx={{
+                                          fontWeight: 800,
+                                          fontSize: '0.65rem',
+                                          bgcolor: alpha(theme.palette.error.main, 0.12),
+                                          color: 'error.main',
+                                          letterSpacing: '0.05em',
+                                          border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+                                        }}
+                                      />
+                                    )}
                                   </Stack>
-                                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                    {trip.available_seats} seats available
+                                  <Typography variant="body2" color={isDeparted ? 'error.main' : 'text.secondary'} sx={{ fontWeight: 600 }}>
+                                    {isDeparted ? 'This bus has already departed' : `${trip.available_seats} seats available`}
                                   </Typography>
                                 </Box>
                                 <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 2, py: 1, borderRadius: 3, bgcolor: alpha(theme.palette.warning.main, 0.1), color: 'warning.dark' }}>
@@ -436,11 +454,11 @@ function SearchContent() {
                                     {trip.route?.estimated_duration_minutes} MIN
                                   </Typography>
                                   <Box sx={{ width: '100%', position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main' }} />
+                                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: isDeparted ? 'error.main' : 'primary.main' }} />
                                     <Divider sx={{ flex: 1, borderStyle: 'dashed', mx: 1 }} />
-                                    <BusIcon size={18} style={{ color: alpha(theme.palette.text.secondary, 0.5) }} />
+                                    <BusIcon size={18} style={{ color: isDeparted ? theme.palette.error.main : alpha(theme.palette.text.secondary, 0.5) }} />
                                     <Divider sx={{ flex: 1, borderStyle: 'dashed', mx: 1 }} />
-                                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', border: '2px solid', borderColor: 'divider' }} />
+                                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', border: '2px solid', borderColor: isDeparted ? 'error.main' : 'divider' }} />
                                   </Box>
                                 </Stack>
 
@@ -483,9 +501,9 @@ function SearchContent() {
                             size={{ xs: 12, md: 4 }}
                             sx={{
                               p: { xs: 3, sm: 4 },
-                              bgcolor: alpha(theme.palette.divider, 0.03),
+                              bgcolor: isDeparted ? alpha(theme.palette.error.main, 0.04) : alpha(theme.palette.divider, 0.03),
                               borderLeft: { md: '1px solid' },
-                              borderColor: { md: 'divider' },
+                              borderColor: { md: isDeparted ? alpha(theme.palette.error.main, 0.2) : 'divider' },
                               display: 'flex',
                               flexDirection: 'column',
                               justifyContent: 'center',
@@ -497,35 +515,59 @@ function SearchContent() {
                               <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                                 Starting Fare
                               </Typography>
-                              <Typography variant="h3" sx={{ fontWeight: 900, color: 'primary.main' }}>
+                              <Typography variant="h3" sx={{ fontWeight: 900, color: isDeparted ? 'text.disabled' : 'primary.main' }}>
                                 ₹{Number(trip.base_price).toLocaleString()}
                               </Typography>
-                              <Typography variant="caption" sx={{ fontWeight: 700, color: 'success.main', display: 'block', mt: 0.5 }}>
-                                {trip.available_seats} seats left
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: isDeparted ? 'error.main' : 'success.main', display: 'block', mt: 0.5 }}>
+                                {isDeparted ? 'No tickets available' : `${trip.available_seats} seats left`}
                               </Typography>
                             </Box>
 
-                            <Button
-                              component={Link}
-                              href={`/book/${trip.id}?passengers=${passengers}`}
-                              variant="contained"
-                              size="large"
-                              fullWidth
-                              endIcon={<ArrowRight size={18} />}
-                              sx={{
-                                borderRadius: 4,
-                                py: 1.8,
-                                fontWeight: 800,
-                                boxShadow: theme.shadows[4],
-                                '&:hover': { boxShadow: theme.shadows[10] },
-                              }}
-                            >
-                              Select Seats
-                            </Button>
+                            {isDeparted ? (
+                              <Box
+                                sx={{
+                                  width: '100%',
+                                  py: 1.8,
+                                  px: 2,
+                                  borderRadius: 4,
+                                  border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+                                  bgcolor: alpha(theme.palette.error.main, 0.06),
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: 1,
+                                  color: 'error.main',
+                                }}
+                              >
+                                <Clock size={16} />
+                                <Typography variant="button" sx={{ fontWeight: 800, fontSize: '0.8rem' }}>
+                                  Tickets Not Available
+                                </Typography>
+                              </Box>
+                            ) : (
+                                <Button
+                                  component={Link}
+                                  href={`/book/${trip.id}`}
+                                  variant="contained"
+                                size="large"
+                                fullWidth
+                                endIcon={<ArrowRight size={18} />}
+                                sx={{
+                                  borderRadius: 4,
+                                  py: 1.8,
+                                  fontWeight: 800,
+                                  boxShadow: theme.shadows[4],
+                                  '&:hover': { boxShadow: theme.shadows[10] },
+                                }}
+                              >
+                                Select Seats
+                              </Button>
+                            )}
                           </Grid>
                         </Grid>
                       </Paper>
-                    ))}
+                      )
+                    })}
                   </Stack>
                 )}
               </Stack>

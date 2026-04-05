@@ -22,6 +22,7 @@ import {
   Chip,
   Skeleton,
   IconButton,
+  type Theme,
 } from '@mui/material'
 import {
   ArrowRight,
@@ -55,11 +56,11 @@ const OFFER_GRADIENTS = [
 ]
 const OFFER_ICONS = [Percent, Gift, Tag]
 
-const HERO_GRADIENT = (theme: any) => theme.palette.mode === 'dark' 
+const HERO_GRADIENT = (theme: Theme) => theme.palette.mode === 'dark' 
   ? `linear-gradient(225deg, ${alpha(theme.palette.primary.main, 1)} 0%, ${alpha('#000', 1)} 100%)`
   : `linear-gradient(225deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
 
-const GLASS_STYLE = (theme: any) => ({
+const GLASS_STYLE = (theme: Theme) => ({
   backdropFilter: 'blur(12px)',
   backgroundColor: theme.palette.mode === 'dark' ? alpha('#1e293b', 0.8) : alpha('#fff', 0.8),
   border: `1px solid ${theme.palette.mode === 'dark' ? alpha('#fff', 0.1) : alpha(theme.palette.primary.main, 0.1)}`,
@@ -88,7 +89,6 @@ export default function HomePage() {
     from: '',
     to: '',
     date: '',
-    passengers: '1',
   })
   const [isSearching, setIsSearching] = useState(false)
   const [today] = useState(() => {
@@ -122,7 +122,7 @@ export default function HomePage() {
     }
     setIsSearching(true)
     router.push(
-      `/search?from=${encodeURIComponent(searchParams.from)}&to=${encodeURIComponent(searchParams.to)}&date=${searchParams.date}&passengers=${searchParams.passengers}`
+      `/search?from=${encodeURIComponent(searchParams.from)}&to=${encodeURIComponent(searchParams.to)}&date=${searchParams.date}`
     )
   }
 
@@ -187,7 +187,7 @@ export default function HomePage() {
                     <span style={{ color: theme.palette.secondary.main }}>Expectations.</span>
                   </Typography>
                   <Typography variant="h5" sx={{ color: alpha('#fff', 0.8), maxWidth: 550, fontWeight: 400, lineHeight: 1.6 }}>
-                    Book premium bus travel across 500+ routes with Voyatra's state-of-the-art booking platform.
+                    Book premium bus travel across 500+ routes with Voyatra&apos;s state-of-the-art booking platform.
                   </Typography>
                 </Box>
 
@@ -381,14 +381,14 @@ export default function HomePage() {
             Special Offers
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, fontSize: '1.1rem' }}>
-            We've partnered with the best operators to bring you exclusive discounts.
+            We&apos;ve partnered with the best operators to bring you exclusive discounts.
           </Typography>
         </Stack>
 
         <Grid container spacing={4} justifyContent="center">
           {loadingOffers
             ? Array.from({ length: 3 }).map((_, i) => (
-                <Grid key={i} xs={12} md={4}>
+                <Grid key={i} size={{ xs: 12, md: 4 }}>
                   <Skeleton variant="rounded" height={280} sx={{ borderRadius: 1 }} />
                 </Grid>
               ))
@@ -427,7 +427,7 @@ export default function HomePage() {
                           fullWidth variant="contained" color="inherit"
                           sx={{ py: 1.5, borderRadius: 1, fontWeight: 800, bgcolor: alpha(theme.palette.text.primary, 0.05) }}
                           onClick={() => {
-                            navigator.clipboard?.writeText((offer as any).code)
+                            navigator.clipboard?.writeText((offer as { code: string }).code)
                             toast.success('Code copied to clipboard!')
                           }}
                         >

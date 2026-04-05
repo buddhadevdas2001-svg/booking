@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useEffect, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter'
 import { ThemeProvider, createTheme, ThemeOptions } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
@@ -24,10 +24,15 @@ export default function ThemeRegistry({ children }: { children: React.ReactNode 
   const { mode } = useThemeStore()
   const [mounted, setMounted] = useState(false)
 
-  // Prevent hydration mismatch
-  useEffect(() => {
+  // Prevent hydration mismatch — set mounted to true after first client render
+  React.useLayoutEffect(() => {
     setMounted(true)
   }, [])
+
+  // Sync data-theme attribute on <html> so globals.css dark-mode selectors work
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', mode)
+  }, [mode])
 
   const theme = useMemo(() => {
     const isDark = mode === 'dark'
@@ -157,6 +162,17 @@ export default function ThemeRegistry({ children }: { children: React.ReactNode 
                   borderColor: isDark ? '#60a5fa' : '#3969c5',
                 },
               },
+            },
+          },
+        },
+        MuiInputAdornment: {
+          styleOverrides: {
+            positionStart: {
+              marginRight: '12px',
+              color: isDark ? alpha('#94a3b8', 0.8) : alpha('#64748b', 0.8),
+            },
+            positionEnd: {
+              marginLeft: '12px',
             },
           },
         },

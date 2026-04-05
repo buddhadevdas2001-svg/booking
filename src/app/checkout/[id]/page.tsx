@@ -8,19 +8,30 @@ import {
     ArrowLeft,
     Bus,
     Calendar,
+    CheckCircle2,
     ChevronRight,
     Clock,
     CreditCard,
     Mail,
     Phone,
     Shield,
+    Tag,
     Users,
+    X,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Navbar from '@/components/common/Navbar'
 import { createPendingBooking, getTripById, lockSeats } from '@/lib/api'
 import { createCheckoutSession } from '@/lib/stripe'
 import { useAuthStore, useBookingStore } from '@/store'
+
+type AppliedCoupon = {
+    id: string
+    code: string
+    discount_type: 'percentage' | 'fixed'
+    discount_value: number
+    description?: string
+}
 
 export default function CheckoutPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -33,6 +44,12 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
         email: user?.email || '',
         phone: user?.phone || '',
     })
+
+    // Coupon state
+    const [couponCode, setCouponCode] = useState('')
+    const [couponLoading, setCouponLoading] = useState(false)
+    const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null)
+    const [couponDiscount, setCouponDiscount] = useState(0)
 
     const { data: trip, isLoading } = useQuery({
         queryKey: ['checkout-trip', id],
@@ -73,7 +90,41 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
     const subtotal = useMemo(() => selectedSeats.length * Number(trip?.base_price || 0), [selectedSeats.length, trip?.base_price])
     const gst = Math.round(subtotal * 0.05)
     const convenienceFee = selectedSeats.length > 0 ? 50 : 0
-    const totalAmount = subtotal + gst + convenienceFee
+    const totalBeforeDiscount = subtotal + gst + convenienceFee
+    const totalAmount = Math.max(0, totalBeforeDiscount - couponDiscount)
+
+    const handleApplyCoupon = async () => {
+        if (!couponCode.trim()) {
+            toast.error('Please enter a coupon code')
+            return
+        }
+        setCouponLoading(true)
+        try {
+            const res = await fetch('/api/coupons/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: couponCode.trim(), cartTotal: subtotal }),
+            })
+            const data = await res.json()
+            if (!res.ok) {
+                throw new Error(data.message || 'Invalid coupon')
+            }
+            setAppliedCoupon(data.coupon)
+            setCouponDiscount(data.discountAmount)
+            toast.success(`Coupon applied! You save ₹${data.discountAmount.toLocaleString()}`)
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to apply coupon')
+        } finally {
+            setCouponLoading(false)
+        }
+    }
+
+    const handleRemoveCoupon = () => {
+        setAppliedCoupon(null)
+        setCouponDiscount(0)
+        setCouponCode('')
+        toast.success('Coupon removed')
+    }
 
     const handlePayment = async () => {
         if (!user) {
@@ -136,10 +187,10 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                     passenger_age: Number(passengerDetails[seat.id].age),
                     price: Number(trip?.base_price || 0),
                 })),
+                couponCode: appliedCoupon?.code,
             })
 
             await createCheckoutSession(booking.id)
-            clearSeats()
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to create booking'
             toast.error(message)
@@ -172,6 +223,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
 
                     <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
                         <div className="space-y-6 lg:col-span-2">
+                            {/* Passenger Details */}
                             <div className="card">
                                 <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white">
                                     <Users size={20} className="text-blue-500" />
@@ -225,6 +277,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                                 </div>
                             </div>
 
+                            {/* Contact Information */}
                             <div className="card">
                                 <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white">
                                     <Phone size={20} className="text-blue-500" />
@@ -240,7 +293,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                                                 type="email"
                                                 value={contactInfo.email}
                                                 onChange={(e) => setContactInfo((prev) => ({ ...prev, email: e.target.value }))}
-                                                className="input pl-10"
+                                                className="input input-with-icon"
                                                 required
                                             />
                                         </div>
@@ -253,7 +306,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                                                 type="tel"
                                                 value={contactInfo.phone}
                                                 onChange={(e) => setContactInfo((prev) => ({ ...prev, phone: e.target.value }))}
-                                                className="input pl-10"
+                                                className="input input-with-icon"
                                                 required
                                             />
                                         </div>
@@ -261,6 +314,65 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                                 </div>
                             </div>
 
+                            {/* Coupon Code Section */}
+                            <div className="card">
+                                <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white">
+                                    <Tag size={20} className="text-blue-500" />
+                                    Apply Coupon
+                                </h2>
+
+                                {appliedCoupon ? (
+                                    <div className="flex items-center justify-between rounded-xl border border-green-500/30 bg-green-500/10 p-4">
+                                        <div className="flex items-center gap-3">
+                                            <CheckCircle2 size={20} className="text-green-400" />
+                                            <div>
+                                                <p className="font-bold text-green-400 font-mono tracking-wider">{appliedCoupon.code}</p>
+                                                <p className="text-xs text-slate-400">
+                                                    {appliedCoupon.description || (
+                                                        appliedCoupon.discount_type === 'percentage'
+                                                            ? `${appliedCoupon.discount_value}% discount applied`
+                                                            : `₹${appliedCoupon.discount_value} discount applied`
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="font-bold text-green-400 text-lg">-₹{couponDiscount.toLocaleString()}</span>
+                                            <button
+                                                onClick={handleRemoveCoupon}
+                                                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-3">
+                                        <div className="relative flex-1">
+                                            <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                                            <input
+                                                type="text"
+                                                value={couponCode}
+                                                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                                                placeholder="Enter coupon code"
+                                                className="input input-with-icon uppercase font-mono tracking-widest"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={handleApplyCoupon}
+                                            disabled={couponLoading || !couponCode.trim()}
+                                            className="btn-primary px-6 disabled:opacity-50"
+                                        >
+                                            {couponLoading ? (
+                                                <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+                                            ) : 'Apply'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Payment Method */}
                             <div className="card">
                                 <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white">
                                     <CreditCard size={20} className="text-blue-500" />
@@ -282,6 +394,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                             </div>
                         </div>
 
+                        {/* Booking Summary Sidebar */}
                         <div className="space-y-6">
                             <div className="card sticky top-24">
                                 <h3 className="mb-4 font-bold text-white">Booking Summary</h3>
@@ -293,7 +406,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                                     </div>
                                     <div>
                                         <p className="font-medium text-white">
-                                            {trip?.route?.origin} -&gt; {trip?.route?.destination}
+                                            {trip?.route?.origin} &rarr; {trip?.route?.destination}
                                         </p>
                                         <p className="text-xs text-slate-400">
                                             {trip?.departure_time
@@ -344,12 +457,32 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                                         <span className="text-slate-400">Convenience Fee</span>
                                         <span className="text-white">₹{convenienceFee.toLocaleString()}</span>
                                     </div>
+                                    {couponDiscount > 0 && (
+                                        <div className="flex justify-between text-sm">
+                                            <span className="flex items-center gap-1 text-green-400">
+                                                <Tag size={12} />
+                                                Coupon ({appliedCoupon?.code})
+                                            </span>
+                                            <span className="font-bold text-green-400">-₹{couponDiscount.toLocaleString()}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex items-center justify-between border-t border-slate-800 pt-4">
                                     <span className="font-bold text-white">Total Amount</span>
-                                    <span className="text-2xl font-bold text-white">₹{totalAmount.toLocaleString()}</span>
+                                    <div className="text-right">
+                                        {couponDiscount > 0 && (
+                                            <p className="text-xs text-slate-500 line-through">₹{totalBeforeDiscount.toLocaleString()}</p>
+                                        )}
+                                        <span className="text-2xl font-bold text-white">₹{totalAmount.toLocaleString()}</span>
+                                    </div>
                                 </div>
+
+                                {couponDiscount > 0 && (
+                                    <div className="mt-2 rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-2 text-center">
+                                        <p className="text-xs font-bold text-green-400">🎉 You save ₹{couponDiscount.toLocaleString()} with this coupon!</p>
+                                    </div>
+                                )}
 
                                 <button onClick={handlePayment} disabled={loading} className="btn-primary mt-6 flex w-full items-center justify-center gap-2">
                                     {loading ? (

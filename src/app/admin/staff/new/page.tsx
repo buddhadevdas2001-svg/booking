@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Box, Typography, Paper, Stack, Button, TextField, MenuItem,
+  Box, Typography, Paper, Stack, Button, TextField, MenuItem, InputAdornment,
   Grid, Switch, FormControlLabel, alpha, useTheme, Divider, Chip,
 } from '@mui/material'
 import { ArrowLeft, Save, UserPlus, Shield, Phone, Briefcase, Hash } from 'lucide-react'
@@ -161,7 +161,13 @@ export default function NewStaffPage() {
                     value={form.phone}
                     onChange={(e) => update('phone', e.target.value)}
                     placeholder="+91 98765 43210"
-                    InputProps={{ startAdornment: <Phone size={16} style={{ marginRight: 8, color: theme.palette.text.secondary }} /> }}
+                    InputProps={{ 
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Phone size={16} />
+                        </InputAdornment>
+                      )
+                    }}
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
                   />
                 </Grid>
@@ -184,7 +190,13 @@ export default function NewStaffPage() {
                     value={form.employee_id}
                     onChange={(e) => update('employee_id', e.target.value)}
                     placeholder="EMP-001"
-                    InputProps={{ startAdornment: <Hash size={16} style={{ marginRight: 8, color: theme.palette.text.secondary }} /> }}
+                    InputProps={{ 
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Hash size={16} />
+                        </InputAdornment>
+                      )
+                    }}
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
                   />
                 </Grid>
@@ -195,7 +207,13 @@ export default function NewStaffPage() {
                     value={form.license_number}
                     onChange={(e) => update('license_number', e.target.value)}
                     placeholder="DL-0420110012345"
-                    InputProps={{ startAdornment: <Shield size={16} style={{ marginRight: 8, color: theme.palette.text.secondary }} /> }}
+                    InputProps={{ 
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Shield size={16} />
+                        </InputAdornment>
+                      )
+                    }}
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
                   />
                 </Grid>

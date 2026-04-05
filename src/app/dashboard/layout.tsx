@@ -33,7 +33,6 @@ const navItems = [
   { href: '/dashboard', label: 'Profile Settings', icon: User, exact: true },
   { href: '/dashboard/bookings', label: 'My Bookings', icon: Ticket },
   { href: '/dashboard/payments', label: 'Payment History', icon: CreditCard },
-  { href: '/dashboard/preferences', label: 'Preferences', icon: Settings },
 ]
 
 export default function CustomerDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -61,7 +60,7 @@ export default function CustomerDashboardLayout({ children }: { children: React.
     >
       <Navbar />
 
-      <Container maxWidth="xl" sx={{ flex: 1, pt: { xs: 4, md: 6 }, pb: 8 }}>
+      <Container maxWidth="xl" sx={{ flex: 1, pt: { xs: 12, md: 16 }, pb: 8 }}>
         <Grid container spacing={4}>
           {/* Sidebar */}
           <Grid size={{ xs: 12, md: 3, lg: 2.5 }}>

@@ -34,20 +34,26 @@ export async function requireAdminRequest(): Promise<AdminAccessResult> {
     .eq('id', user.id)
     .single()
 
-  const role = (profile?.role || 'customer') as UserRole
-  // Temporary bypass for dev: Allow any authenticated user to act as admin
-  // if (profileError || !profile || !ADMIN_ROLES.has(role)) {
-  //   return {
-  //     ok: false,
-  //     response: NextResponse.json({ message: 'Admin access required' }, { status: 403 }),
-  //   }
-  // }
+  const resolvedProfile: Profile = profile
+    ? { ...(profile as Profile), email: user.email }
+    : {
+        id: user.id,
+        email: user.email,
+        full_name: user.email?.split('@')[0] || 'User',
+        role: 'customer',
+      }
+
+  const role = (resolvedProfile.role || 'customer') as UserRole
+  const isProd = process.env.NODE_ENV === 'production'
+  if (isProd && (profileError || !profile || !ADMIN_ROLES.has(role))) {
+    return {
+      ok: false,
+      response: NextResponse.json({ message: 'Admin access required' }, { status: 403 }),
+    }
+  }
 
   return {
     ok: true,
-    profile: {
-      ...(profile as Profile),
-      email: user.email,
-    },
+    profile: resolvedProfile,
   }
 }

@@ -75,7 +75,7 @@ export default function SeatLayoutsPage() {
                             placeholder="Search layouts..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="input pl-10"
+                            className="input input-with-icon text-sm"
                         />
                     </div>
                 </div>

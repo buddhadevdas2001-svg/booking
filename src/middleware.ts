@@ -45,6 +45,7 @@ export async function middleware(request: NextRequest) {
     }
 
     const { pathname } = request.nextUrl
+    const isProd = process.env.NODE_ENV === 'production'
 
     // Protect admin routes
     if (pathname.startsWith('/admin')) {
@@ -52,10 +53,9 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(new URL('/auth/login', request.url))
         }
 
-        // Temporary bypass for dev: Allow any authenticated user to access /admin
-        // if (role !== 'admin' && role !== 'agent') {
-        //     return NextResponse.redirect(new URL('/', request.url))
-        // }
+        if (isProd && role !== 'admin' && role !== 'agent') {
+            return NextResponse.redirect(new URL('/', request.url))
+        }
     }
 
     // Protect dashboard routes for customers
