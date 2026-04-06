@@ -390,7 +390,7 @@ export default function Navbar() {
               </ListItem>
             )
           })}
-          {user && (user.role === 'admin' || user.role === 'agent') && (
+          {user && (
             <ListItem disablePadding sx={{ mb: 1 }}>
               <ListItemButton
                 component={Link}
