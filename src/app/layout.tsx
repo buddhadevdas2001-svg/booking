@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import QueryProvider from '@/components/providers/QueryProvider'
 import ThemeRegistry from '@/components/providers/ThemeRegistry'
 import AuthProvider from '@/components/providers/AuthProvider'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 export const metadata: Metadata = {
   title: 'Voyatra - Bus Booking Platform',
@@ -48,6 +49,7 @@ export default function RootLayout({
             />
           </ThemeRegistry>
         </QueryProvider>
+        <SpeedInsights />
       </body>
     </html>
   )
