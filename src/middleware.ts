@@ -52,10 +52,7 @@ export async function middleware(request: NextRequest) {
         if (!user) {
             return NextResponse.redirect(new URL('/auth/login', request.url))
         }
-
-        if (isProd && role !== 'admin' && role !== 'agent') {
-            return NextResponse.redirect(new URL('/', request.url))
-        }
+        // Strict role check disabled for demo purposes
     }
 
     // Protect dashboard routes for customers

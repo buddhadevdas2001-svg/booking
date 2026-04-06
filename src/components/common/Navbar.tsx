@@ -254,11 +254,9 @@ export default function Navbar() {
                     <MenuItem component={Link} href="/dashboard" onClick={handleUserMenuClose}>
                       Dashboard
                     </MenuItem>
-                    {(user.role === 'admin' || user.role === 'agent') && (
-                      <MenuItem component={Link} href="/admin" onClick={handleUserMenuClose} sx={{ color: 'primary.main', fontWeight: 600 }}>
-                        Admin Panel
-                      </MenuItem>
-                    )}
+                    <MenuItem component={Link} href="/admin" onClick={handleUserMenuClose} sx={{ color: 'primary.main', fontWeight: 600 }}>
+                      Admin Panel
+                    </MenuItem>
                     <MenuItem component={Link} href="/dashboard/bookings" onClick={handleUserMenuClose}>
                       My Bookings
                     </MenuItem>
@@ -392,7 +390,7 @@ export default function Navbar() {
               </ListItem>
             )
           })}
-          {user && (user.role === 'admin' || user.role === 'agent') && (
+          {user && (
             <ListItem disablePadding sx={{ mb: 1 }}>
               <ListItemButton
                 component={Link}

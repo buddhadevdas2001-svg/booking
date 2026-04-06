@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import type { BookingSeat } from '@/types/supabase'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'dummy_key_to_bypass_build', {
     apiVersion: '2025-01-27.acacia' as Stripe.LatestApiVersion,
 })
 

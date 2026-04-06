@@ -34,12 +34,15 @@ export default function ThemeRegistry({ children }: { children: React.ReactNode 
     document.documentElement.setAttribute('data-theme', mode)
   }, [mode])
 
+  // Use a default theme for server side rendering
+  // The client will hydrate and automatically update to the persisted user theme
   const theme = useMemo(() => {
-    const isDark = mode === 'dark'
+    // If not mounted yet (SSR or first render), default to a stable mode to prevent mismatch
+    const isDark = mounted ? (mode === 'dark') : false;
     
     return createTheme({
       palette: {
-        mode,
+        mode: isDark ? 'dark' : 'light',
         primary: {
           main: isDark ? '#60a5fa' : '#3969c5', // Blue 400 in dark, custom blue in light
           light: isDark ? '#93c5fd' : '#4f82e3',
@@ -178,17 +181,16 @@ export default function ThemeRegistry({ children }: { children: React.ReactNode 
         },
       },
     })
-  }, [mode])
-
-  if (!mounted) {
-    return null;
-  }
+  }, [mode, mounted])
 
   return (
     <AppRouterCacheProvider options={{ key: 'mui' }}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        {children}
+        {/* Wrap in a div that fades in once mounted to hide hydration flip */}
+        <div style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.25s ease-in' }}>
+          {children}
+        </div>
       </ThemeProvider>
     </AppRouterCacheProvider>
   )
