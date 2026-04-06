@@ -3,7 +3,8 @@ import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { BookingStatus, PaymentStatus } from '@/types/supabase'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+// Prevent Next.js static generation from crashing at build-time if env var is missing
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'dummy_key_to_bypass_build', {
     apiVersion: '2025-01-27.acacia' as Stripe.LatestApiVersion,
 })
 
