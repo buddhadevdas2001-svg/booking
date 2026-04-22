@@ -44,27 +44,18 @@ export default function AssignStaffPage({ params }: { params: Promise<{ id: stri
     const { data: trip, isLoading: tripLoading } = useQuery({
         queryKey: ['admin-trip', id],
         queryFn: async () => {
-            const supabase = createClient()
-            const { data, error } = await supabase
-                .from('trips')
-                .select('*, route:routes(*), bus:buses(*)')
-                .eq('id', id)
-                .single()
-            if (error) throw error
-            return data as unknown as TripDetails
+            const res = await fetch(`/api/admin/trips/${id}`)
+            if (!res.ok) throw new Error('Failed to fetch trip details')
+            return res.json() as Promise<TripDetails>
         }
     })
 
     const { data: tripStaff = [], isLoading: tripStaffLoading } = useQuery<TripStaffMember[]>({
         queryKey: ['trip-staff', id],
         queryFn: async () => {
-            const supabase = createClient()
-            const { data, error } = await supabase
-                .from('trip_staff')
-                .select('*, staff:staff(*, user:profiles(full_name))')
-                .eq('trip_id', id)
-            if (error) throw error
-            return (data || []) as unknown as TripStaffMember[]
+            const res = await fetch(`/api/admin/trips/${id}/staff`)
+            if (!res.ok) throw new Error('Failed to fetch trip staff')
+            return res.json()
         }
     })
 

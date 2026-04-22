@@ -49,7 +49,7 @@ export default function AdminBookingsPage() {
   const theme = useTheme()
   const [searchTerm, setSearchTerm] = useState('')
 
-  const { data: bookings, isLoading } = useQuery<AdminBookingRow[]>({
+  const { data: bookings, isLoading, error: queryError } = useQuery<AdminBookingRow[]>({
     queryKey: ['admin-bookings'],
     queryFn: async () => {
       const supabase = createClient()
@@ -57,7 +57,7 @@ export default function AdminBookingsPage() {
         .from('bookings')
         .select(`
           *,
-          user:user_id(email),
+          user:user_id(full_name),
           trip:trip_id(
             departure_time,
             route:route_id(origin, destination),
@@ -73,11 +73,13 @@ export default function AdminBookingsPage() {
 
   const filteredBookings = bookings?.filter((b) => {
     const term = searchTerm.toLowerCase()
-    const email = b.user?.email?.toLowerCase() || ''
+    const email = b.contact_email?.toLowerCase() || ''
+    const ref = b.booking_reference?.toLowerCase() || ''
     const origin = b.trip?.route?.origin?.toLowerCase() || ''
     const destination = b.trip?.route?.destination?.toLowerCase() || ''
     return (
       b.id.toLowerCase().includes(term) ||
+      ref.includes(term) ||
       email.includes(term) ||
       origin.includes(term) ||
       destination.includes(term)
@@ -108,7 +110,7 @@ export default function AdminBookingsPage() {
 
       <Paper elevation={0} sx={{ p: 2, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
         <TextField
-          placeholder="Search bookings..."
+          placeholder="Search by reference, email, or route..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           size="small"
@@ -121,12 +123,18 @@ export default function AdminBookingsPage() {
         />
       </Paper>
 
+      {queryError && (
+        <Paper sx={{ p: 4, textAlign: 'center', bgcolor: alpha(theme.palette.error.main, 0.05), border: '1px solid', borderColor: 'error.main' }}>
+          <Typography color="error" sx={{ fontWeight: 700 }}>Failed to load bookings: {(queryError as Error).message}</Typography>
+        </Paper>
+      )}
+
       <Paper elevation={0} sx={{ borderRadius: 6, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: alpha(theme.palette.divider, 0.02) }}>
-                <TableCell sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase' }}>User</TableCell>
+                <TableCell sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase' }}>Reference & Contact</TableCell>
                 <TableCell sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase' }}>Trip</TableCell>
                 <TableCell sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase' }}>Amount</TableCell>
                 <TableCell sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase' }}>Status</TableCell>
@@ -135,24 +143,55 @@ export default function AdminBookingsPage() {
             </TableHead>
             <TableBody>
               {isLoading ? (
-                [1,2,3].map(i => <TableRow key={i}><TableCell colSpan={5}><Skeleton height={60} /></TableCell></TableRow>)
+                [1,2,3,4,5].map(i => <TableRow key={i}><TableCell colSpan={5}><Skeleton height={70} /></TableCell></TableRow>)
+              ) : filteredBookings?.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                    <Typography color="text.secondary" sx={{ fontWeight: 600 }}>No bookings found.</Typography>
+                  </TableCell>
+                </TableRow>
               ) : filteredBookings?.map((booking) => (
-                <TableRow key={booking.id}>
+                <TableRow key={booking.id} hover sx={{ '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.01) } }}>
                   <TableCell>
                     <Stack direction="row" spacing={1.5} alignItems="center">
-                      <Avatar sx={{ width: 32, height: 32 }}>{booking.user?.email?.[0].toUpperCase()}</Avatar>
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{booking.user?.email}</Typography>
+                      <Avatar sx={{ width: 36, height: 36, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', fontSize: '0.9rem', fontWeight: 800 }}>
+                        {booking.booking_reference.slice(-2).toUpperCase()}
+                      </Avatar>
+                      <Box>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>{booking.booking_reference}</Typography>
+                          {booking.user?.full_name && <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 800, bgcolor: alpha(theme.palette.primary.main, 0.05), px: 0.8, py: 0.2, borderRadius: 1 }}>{booking.user.full_name}</Typography>}
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{booking.contact_email}</Typography>
+                      </Box>
                     </Stack>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 800 }}>{booking.trip?.route?.origin} → {booking.trip?.route?.destination}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {booking.trip?.departure_time ? new Date(booking.trip.departure_time).toLocaleString() : 'Departure pending'}
-                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Clock size={12} className="text-slate-400" />
+                      <Typography variant="caption" color="text.secondary">
+                        {booking.trip?.departure_time ? new Date(booking.trip.departure_time).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Departure pending'}
+                      </Typography>
+                    </Stack>
                   </TableCell>
-                  <TableCell><Typography variant="subtitle2" sx={{ fontWeight: 900 }}>₹{Number(booking.total_amount).toLocaleString()}</Typography></TableCell>
-                  <TableCell><Chip label={booking.status} size="small" color={getStatusColor(booking.status)} /></TableCell>
-                  <TableCell align="right"><IconButton size="small"><Eye size={18} /></IconButton></TableCell>
+                  <TableCell>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>₹{Number(booking.final_amount || booking.total_amount).toLocaleString()}</Typography>
+                    <Typography variant="caption" color="text.secondary">{booking.payment_status}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={booking.status} 
+                      size="small" 
+                      color={getStatusColor(booking.status)}
+                      sx={{ fontWeight: 800, fontSize: '0.65rem', textTransform: 'uppercase', height: 20 }} 
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Tooltip title="View Details">
+                      <IconButton size="small" sx={{ color: 'primary.main' }}><Eye size={18} /></IconButton>
+                    </Tooltip>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

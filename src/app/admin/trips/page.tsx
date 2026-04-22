@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { Plus, MapPin, Users, Bus, Zap } from 'lucide-react'
+import { Plus, MapPin, Users, Bus, Zap, Edit2 } from 'lucide-react'
 import { calculateDynamicPrice } from '@/lib/pricing_engine'
 import type { AdminUpcomingTrip } from '@/types/supabase'
 import {
@@ -106,15 +106,25 @@ export default function AdminTripsPage() {
                             {trip.route?.origin} → {trip.route?.destination}
                           </Typography>
                         </Stack>
-                        <Button
-                          component={Link}
-                          href={`/admin/trips/${trip.id}/assign-staff`}
-                          size="small"
-                          startIcon={<Users size={14} />}
-                          sx={{ fontSize: '0.7rem', fontWeight: 700, width: 'fit-content', opacity: 0.8, '&:hover': { opacity: 1 } }}
-                        >
-                          Assign Crew
-                        </Button>
+                        <Stack direction="row" spacing={1}>
+                          <Button
+                            component={Link}
+                            href={`/admin/trips/${trip.id}/assign-staff`}
+                            size="small"
+                            startIcon={<Users size={14} />}
+                            sx={{ fontSize: '0.7rem', fontWeight: 700, width: 'fit-content', opacity: 0.8, '&:hover': { opacity: 1 } }}
+                          >
+                            Crew
+                          </Button>
+                          <IconButton
+                            component={Link}
+                            href={`/admin/trips/${trip.id}/edit`}
+                            size="small"
+                            sx={{ color: 'primary.main', opacity: 0.8, '&:hover': { opacity: 1 } }}
+                          >
+                            <Edit2 size={16} />
+                          </IconButton>
+                        </Stack>
                       </Stack>
                     </TableCell>
                     <TableCell>

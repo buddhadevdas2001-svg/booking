@@ -88,8 +88,6 @@ async function main() {
     fail('GET /api/setup', err)
   }
 
-  // Keep public endpoints for basic smoke checks. Admin endpoints are exercised
-  // via the Supabase service role client below.
   const publicPaths = [
     '/api/cities',
     '/api/offers',
@@ -130,7 +128,7 @@ async function main() {
     const { data: layoutsData } = await adminSupabase.from('seat_layouts').select('*')
     layouts = layoutsData || []
   } catch (err) {
-    // ignore - we'll create resources as needed
+
   }
 
   try {

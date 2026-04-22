@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
     try {
         const { email, password } = await req.json()
+        // Use server (cookie-based) client for sign-in — does NOT need service role key
         const supabase = await createClient()
 
         const { data: { user }, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
         if (loginError) throw loginError
         if (!user) throw new Error('Login failed')
 
-        const { data: profile, error: profileError } = await supabase
+        // Try admin client for profile lookup; fall back to server client
+        let dbClient = supabase
+        try { dbClient = createAdminClient() } catch { /* no service key, use server client */ }
+        const { data: profile, error: profileError } = await dbClient
             .from('profiles')
             .select('*')
             .eq('id', user.id)
@@ -19,7 +23,7 @@ export async function POST(req: NextRequest) {
 
         if (profileError) {
             console.warn('Profile missing for user, creating default', user.id)
-            const adminSupabase = createAdminClient()
+            const adminSupabase = await createClient()
             const { data: newProfile } = await adminSupabase
                 .from('profiles')
                 .insert({ id: user.id, full_name: user.user_metadata?.full_name || 'User', role: 'customer' })

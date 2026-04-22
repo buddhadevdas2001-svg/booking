@@ -1,5 +1,38 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createServerClient } from '@/lib/supabase/server'
+
+// Safe DB client: uses admin client (bypasses RLS) if service role key is set, 
+// otherwise falls back to server client (uses RLS with current user session).
+async function getDbClient() {
+    try {
+        return createAdminClient()
+    } catch {
+        return createServerClient()
+    }
+}
+
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const { id: trip_id } = await params
+        const supabase = await getDbClient()
+        
+        const { data, error } = await supabase
+            .from('trip_staff')
+            .select('*, staff:staff(*, user:profiles(full_name))')
+            .eq('trip_id', trip_id)
+            
+        if (error) {
+            console.error('[API] trip_staff GET error:', error)
+            throw error
+        }
+        
+        return NextResponse.json(data || [])
+    } catch (e: unknown) {
+        console.error('Trip Staff Fetch Error:', e)
+        return NextResponse.json({ error: e instanceof Error ? e.message : 'Internal server error' }, { status: 500 })
+    }
+}
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -10,7 +43,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             return NextResponse.json({ error: 'Missing required fields: staff_id and role' }, { status: 400 })
         }
 
-        const supabase = createAdminClient()
+        const supabase = await getDbClient()
         const { data, error } = await supabase.from('trip_staff').insert({
             trip_id,
             staff_id,
@@ -38,7 +71,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
             return NextResponse.json({ error: 'assignmentId is required' }, { status: 400 })
         }
 
-        const supabase = createAdminClient()
+        const supabase = await getDbClient()
         const { error } = await supabase.from('trip_staff').delete().eq('id', assignmentId)
         
         if (error) {

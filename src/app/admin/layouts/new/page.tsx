@@ -85,7 +85,6 @@ export default function SeatLayoutDesigner() {
         }
     }
 
-    // Initialize/Reset grid
     const initializeGrid = () => {
         const newState: Record<string, SeatType> = {}
         const decks = hasUpperDeck ? ['lower', 'upper'] : ['lower']
@@ -94,7 +93,6 @@ export default function SeatLayoutDesigner() {
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
                     const key = `${deck}-${r}-${c}`
-                    // default aisle logic (middle col empty)
                     if (c === Math.floor(cols / 2)) newState[key] = 'empty'
                     else newState[key] = 'seater'
                 }
@@ -209,7 +207,7 @@ export default function SeatLayoutDesigner() {
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-medium">
                     FRONT
                 </div>
-                
+
                 {/* Seat Grid */}
                 <div
                     className="grid gap-2"
@@ -244,161 +242,161 @@ export default function SeatLayoutDesigner() {
     return (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Link href="/admin/layouts" className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-400 hover:text-white transition-all">
-                        <ArrowLeft size={18} />
-                    </Link>
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
-                            <LayoutGrid className="text-blue-400" size={28} />
-                            Seat Layout Designer
-                        </h1>
-                        <p className="text-slate-400 mt-1 flex items-center gap-2">
-                            <Sparkles size={14} />
-                            Drag seats from the palette onto the grid, or click to toggle.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setPreviewMode(!previewMode)}
-                        className={`p-2 rounded-xl transition-all ${previewMode ? 'bg-blue-600 text-white' : 'bg-white/10 text-slate-400 hover:text-white'}`}
-                        title={previewMode ? 'Exit Preview' : 'Preview Mode'}
-                    >
-                        {previewMode ? <Eye size={18} /> : <EyeOff size={18} />}
-                    </button>
-                    <button
-                        onClick={handleUndo}
-                        disabled={historyIndex <= 0}
-                        className="p-2 rounded-xl bg-white/10 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                        title="Undo"
-                    >
-                        <Undo2 size={18} />
-                    </button>
-                    <button
-                        onClick={handleRedo}
-                        disabled={historyIndex >= history.length - 1}
-                        className="p-2 rounded-xl bg-white/10 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                        title="Redo"
-                    >
-                        <Redo2 size={18} />
-                    </button>
-                    <button onClick={handleSave} disabled={loading} className="btn-primary flex items-center gap-2">
-                        <Save size={18} />
-                        <span>{loading ? 'Saving...' : 'Save Layout'}</span>
-                    </button>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* Controls Sidebar */}
-                <div className="lg:col-span-1 space-y-6">
-                    <div className="card">
-                        <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                            <Grid3x3 size={18} className="text-blue-400" />
-                            Configuration
-                        </h3>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="label">Layout Name</label>
-                                <input 
-                                    type="text" 
-                                    value={layoutName} 
-                                    onChange={(e) => setLayoutName(e.target.value)} 
-                                    placeholder="e.g. Standard 40 Seater" 
-                                    className="input" 
-                                />
-                            </div>
-
-                            <div>
-                                <label className="label">Assign to Bus (Optional)</label>
-                                <select value={selectedBusId} onChange={(e) => setSelectedBusId(e.target.value)} className="input">
-                                    <option value="none">Save as Template only</option>
-                                    {buses?.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="label">Rows</label>
-                                    <input type="number" min="5" max="25" value={rows} onChange={(e) => setRows(Number(e.target.value))} className="input" />
-                                </div>
-                                <div>
-                                    <label className="label">Columns</label>
-                                    <input type="number" min="3" max="7" value={cols} onChange={(e) => setCols(Number(e.target.value))} className="input" />
-                                </div>
-                            </div>
-
-                            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
-                                <input
-                                    type="checkbox"
-                                    checked={hasUpperDeck}
-                                    onChange={(e) => setHasUpperDeck(e.target.checked)}
-                                    className="w-5 h-5 rounded border-white/30 text-blue-600 focus:ring-blue-600 bg-white/10"
-                                />
-                                <span className="text-sm font-medium text-white">Enable Upper Deck</span>
-                            </label>
-
-                            <button onClick={initializeGrid} className="btn-secondary w-full flex items-center justify-center gap-2">
-                                <LayoutGrid size={16} />
-                                Generate Grid
-                            </button>
-
-                            {totalSeats > 0 && (
-                                <div className="pt-4 border-t border-white/10">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-400">Total Seats:</span>
-                                        <span className="text-white font-bold">{totalSeats}</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Legend */}
-                    <div className="card">
-                        <h3 className="font-bold text-white mb-4">Palette (Drag & Drop)</h3>
-                        <ul className="space-y-3">
-                            <DraggablePaletteItem type="seater" label="Seater" icon={<span className="text-transparent">S</span>} />
-                            <DraggablePaletteItem type="sleeper" label="Sleeper" icon={<span className="text-transparent">Bed</span>} />
-                            <DraggablePaletteItem type="driver" label="Driver" icon={<span className="text-[10px] text-amber-500 font-bold">DRV</span>} />
-                            <DraggablePaletteItem type="empty" label="Empty / Aisle" icon={<span className="text-slate-500 font-bold text-xs">aisle</span>} />
-                        </ul>
-                    </div>
-                </div>
-
-                {/* Grid Preview */}
-                <div className="lg:col-span-3 space-y-6">
-                    {Object.keys(gridState).length === 0 ? (
-                        <div className="card h-96 flex flex-col items-center justify-center text-center">
-                            <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-4 animate-float">
-                                <LayoutGrid size={40} className="text-blue-400" />
-                            </div>
-                            <h3 className="text-xl font-bold text-white mb-2">Ready to Design</h3>
-                            <p className="text-slate-400 max-w-sm">
-                                Configure your grid dimensions and click &quot;Generate Grid&quot; to start creating your perfect seat layout.
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <Link href="/admin/layouts" className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-400 hover:text-white transition-all">
+                            <ArrowLeft size={18} />
+                        </Link>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
+                                <LayoutGrid className="text-blue-400" size={28} />
+                                Seat Layout Designer
+                            </h1>
+                            <p className="text-slate-400 mt-1 flex items-center gap-2">
+                                <Sparkles size={14} />
+                                Drag seats from the palette onto the grid, or click to toggle.
                             </p>
                         </div>
-                    ) : (
-                        <div className="space-y-8">
-                            {renderDeck('lower')}
-                            {hasUpperDeck && renderDeck('upper')}
-                            
-                            {previewMode && (
-                                <div className="flex items-center justify-center gap-2 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                                    <AlertCircle size={16} className="text-blue-400" />
-                                    <p className="text-sm text-blue-400">Preview Mode - Clicking on seats is disabled</p>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setPreviewMode(!previewMode)}
+                            className={`p-2 rounded-xl transition-all ${previewMode ? 'bg-blue-600 text-white' : 'bg-white/10 text-slate-400 hover:text-white'}`}
+                            title={previewMode ? 'Exit Preview' : 'Preview Mode'}
+                        >
+                            {previewMode ? <Eye size={18} /> : <EyeOff size={18} />}
+                        </button>
+                        <button
+                            onClick={handleUndo}
+                            disabled={historyIndex <= 0}
+                            className="p-2 rounded-xl bg-white/10 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            title="Undo"
+                        >
+                            <Undo2 size={18} />
+                        </button>
+                        <button
+                            onClick={handleRedo}
+                            disabled={historyIndex >= history.length - 1}
+                            className="p-2 rounded-xl bg-white/10 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            title="Redo"
+                        >
+                            <Redo2 size={18} />
+                        </button>
+                        <button onClick={handleSave} disabled={loading} className="btn-primary flex items-center gap-2">
+                            <Save size={18} />
+                            <span>{loading ? 'Saving...' : 'Save Layout'}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* Controls Sidebar */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="card">
+                            <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                                <Grid3x3 size={18} className="text-blue-400" />
+                                Configuration
+                            </h3>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="label">Layout Name</label>
+                                    <input
+                                        type="text"
+                                        value={layoutName}
+                                        onChange={(e) => setLayoutName(e.target.value)}
+                                        placeholder="e.g. Standard 40 Seater"
+                                        className="input"
+                                    />
                                 </div>
-                            )}
+
+                                <div>
+                                    <label className="label">Assign to Bus (Optional)</label>
+                                    <select value={selectedBusId} onChange={(e) => setSelectedBusId(e.target.value)} className="input">
+                                        <option value="none">Save as Template only</option>
+                                        {buses?.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                    </select>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="label">Rows</label>
+                                        <input type="number" min="5" max="25" value={rows} onChange={(e) => setRows(Number(e.target.value))} className="input" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Columns</label>
+                                        <input type="number" min="3" max="7" value={cols} onChange={(e) => setCols(Number(e.target.value))} className="input" />
+                                    </div>
+                                </div>
+
+                                <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
+                                    <input
+                                        type="checkbox"
+                                        checked={hasUpperDeck}
+                                        onChange={(e) => setHasUpperDeck(e.target.checked)}
+                                        className="w-5 h-5 rounded border-white/30 text-blue-600 focus:ring-blue-600 bg-white/10"
+                                    />
+                                    <span className="text-sm font-medium text-white">Enable Upper Deck</span>
+                                </label>
+
+                                <button onClick={initializeGrid} className="btn-secondary w-full flex items-center justify-center gap-2">
+                                    <LayoutGrid size={16} />
+                                    Generate Grid
+                                </button>
+
+                                {totalSeats > 0 && (
+                                    <div className="pt-4 border-t border-white/10">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-slate-400">Total Seats:</span>
+                                            <span className="text-white font-bold">{totalSeats}</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    )}
+
+                        {/* Legend */}
+                        <div className="card">
+                            <h3 className="font-bold text-white mb-4">Palette (Drag & Drop)</h3>
+                            <ul className="space-y-3">
+                                <DraggablePaletteItem type="seater" label="Seater" icon={<span className="text-transparent">S</span>} />
+                                <DraggablePaletteItem type="sleeper" label="Sleeper" icon={<span className="text-transparent">Bed</span>} />
+                                <DraggablePaletteItem type="driver" label="Driver" icon={<span className="text-[10px] text-amber-500 font-bold">DRV</span>} />
+                                <DraggablePaletteItem type="empty" label="Empty / Aisle" icon={<span className="text-slate-500 font-bold text-xs">aisle</span>} />
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* Grid Preview */}
+                    <div className="lg:col-span-3 space-y-6">
+                        {Object.keys(gridState).length === 0 ? (
+                            <div className="card h-96 flex flex-col items-center justify-center text-center">
+                                <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-4 animate-float">
+                                    <LayoutGrid size={40} className="text-blue-400" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white mb-2">Ready to Design</h3>
+                                <p className="text-slate-400 max-w-sm">
+                                    Configure your grid dimensions and click &quot;Generate Grid&quot; to start creating your perfect seat layout.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-8">
+                                {renderDeck('lower')}
+                                {hasUpperDeck && renderDeck('upper')}
+
+                                {previewMode && (
+                                    <div className="flex items-center justify-center gap-2 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                                        <AlertCircle size={16} className="text-blue-400" />
+                                        <p className="text-sm text-blue-400">Preview Mode - Clicking on seats is disabled</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
         </DndContext>
     )
 }

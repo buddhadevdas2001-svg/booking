@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client'
+import { createAdminClient as createClient } from '@/lib/supabase/admin'
 
 const supabase = createClient()
 

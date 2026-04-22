@@ -38,7 +38,7 @@ export async function POST(
   const body = await request.json()
   const { reason, refund_requested } = body
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Get booking with trip details
   const { data: booking, error: fetchError } = await supabase
