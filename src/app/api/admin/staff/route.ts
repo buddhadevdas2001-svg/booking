@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import { requireAdminRequest } from '@/lib/admin-auth'
+
+// Safe DB client: uses admin client (bypasses RLS) if service role key is set, 
+// otherwise falls back to server client (uses RLS with current user session).
+async function getDbClient() {
+    try {
+        return createAdminClient()
+    } catch {
+        return createServerClient()
+    }
+}
 
 export async function GET() {
     const auth = await requireAdminRequest()
     if (!auth.ok) return auth.response
     try {
-        const supabase = createAdminClient()
+        const supabase = await getDbClient()
         const { data, error } = await supabase
             .from('staff')
             .select(`
@@ -28,7 +39,7 @@ export async function POST(req: NextRequest) {
     try {
         const payload = await req.json()
         const { full_name, phone, ...staffData } = payload
-        const supabase = createAdminClient()
+        const supabase = await getDbClient()
 
         // Generate a fake user to store the profile info
         const fakeEmail = `staff_${Date.now()}@voyatra.local`

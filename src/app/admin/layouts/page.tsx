@@ -10,7 +10,7 @@ import type { SeatLayout, SeatLayoutData } from '@/types/supabase'
 type LayoutListItem = SeatLayout & {
     buses?: {
         name?: string
-    } | null
+    }[] | { name?: string } | null
 }
 
 type SeatLayoutApiRow = Omit<LayoutListItem, 'layout_data'> & {
@@ -26,8 +26,7 @@ export default function SeatLayoutsPage() {
             const res = await fetch('/api/admin/seat-layouts')
             if (!res.ok) throw new Error('Failed to load layouts')
             const data = await res.json()
-            
-            // Ensure layout_data is parsed if it comes as a string (Supabase safety)
+
             return ((data || []) as SeatLayoutApiRow[]).map((l) => ({
                 ...l,
                 layout_data: typeof l.layout_data === 'string' ? JSON.parse(l.layout_data) : l.layout_data
@@ -41,7 +40,10 @@ export default function SeatLayoutsPage() {
             const res = await fetch(`/api/admin/seat-layouts/${id}`, {
                 method: 'DELETE'
             })
-            if (!res.ok) throw new Error('Failed to delete layout')
+            if (!res.ok) {
+                const errData = await res.json().catch(() => null)
+                throw new Error(errData?.message || 'Failed to delete layout')
+            }
             toast.success('Seat layout deleted successfully')
             refetch()
         } catch (err) {
@@ -116,7 +118,12 @@ export default function SeatLayoutsPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-slate-300">
-                                            {layout.buses?.name ? (
+                                            {Array.isArray(layout.buses) && layout.buses.length > 0 ? (
+                                                <div className="flex items-center gap-2">
+                                                    <BusIcon size={14} className="text-slate-500" />
+                                                    <span>{layout.buses.map(b => b.name).join(', ')}</span>
+                                                </div>
+                                            ) : layout.buses && !Array.isArray(layout.buses) && layout.buses.name ? (
                                                 <div className="flex items-center gap-2">
                                                     <BusIcon size={14} className="text-slate-500" />
                                                     <span>{layout.buses.name}</span>
@@ -135,7 +142,12 @@ export default function SeatLayoutsPage() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => handleDelete(layout.id)} className="p-2 text-slate-400 hover:text-red-400 bg-slate-800 hover:bg-red-900/30 rounded-lg transition-colors">
+                                                <button 
+                                                    onClick={() => handleDelete(layout.id)} 
+                                                    disabled={(Array.isArray(layout.buses) ? layout.buses.length > 0 : !!layout.buses?.name)}
+                                                    title={(Array.isArray(layout.buses) ? layout.buses.length > 0 : !!layout.buses?.name) ? 'Cannot delete layout assigned to a bus' : 'Delete layout'}
+                                                    className={`p-2 rounded-lg transition-colors ${(Array.isArray(layout.buses) ? layout.buses.length > 0 : !!layout.buses?.name) ? 'text-slate-600 bg-slate-800/50 cursor-not-allowed' : 'text-slate-400 hover:text-red-400 bg-slate-800 hover:bg-red-900/30'}`}
+                                                >
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>

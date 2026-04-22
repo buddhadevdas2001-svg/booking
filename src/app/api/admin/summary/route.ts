@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import { requireAdminRequest } from '@/lib/admin-auth'
 
 type BookingMetricRow = {
@@ -7,10 +8,20 @@ type BookingMetricRow = {
     status: string | null
 }
 
+// Safe DB client: uses admin client (bypasses RLS) if service role key is set, 
+// otherwise falls back to server client (uses RLS with current user session).
+async function getDbClient() {
+    try {
+        return createAdminClient()
+    } catch {
+        return createServerClient()
+    }
+}
+
 export async function GET() {
     const auth = await requireAdminRequest()
     if (!auth.ok) return auth.response
-    const supabase = createAdminClient()
+    const supabase = await getDbClient()
 
     const [bookingsCountRes, confirmedBookingsRes, busesCountRes, usersCountRes, bookingsListRes, tripsRes] = await Promise.all([
         supabase.from('bookings').select('id', { count: 'exact', head: true }),

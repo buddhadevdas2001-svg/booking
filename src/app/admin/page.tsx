@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Bus,
   Users,
@@ -37,7 +37,6 @@ import {
   Skeleton,
 } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
-import { seedDatabase } from '@/lib/seed'
 import type { AdminAnalytics, AdminSummary } from '@/types/supabase'
 
 const DASHBOARD_CHART_COLORS = ['#3b82f6', '#8b5cf6', '#ec489a', '#f97316']
@@ -46,6 +45,11 @@ export default function AdminDashboardPage() {
   const theme = useTheme()
   const [timeframe, setTimeframe] = useState('week')
   const [seeding, setSeeding] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const { data: summary, isLoading } = useQuery<AdminSummary>({
     queryKey: ['admin-summary'],
@@ -76,7 +80,8 @@ export default function AdminDashboardPage() {
     if (!confirm('This will add sample data to your database. Continue?')) return
     setSeeding(true)
     try {
-      await seedDatabase()
+      const res = await fetch('/api/admin/debug-seed', { method: 'POST' })
+      if (!res.ok) throw new Error('Seeding failed')
       toast.success('Database seeded successfully!')
       window.location.reload()
     } catch (error) {
@@ -191,38 +196,61 @@ export default function AdminDashboardPage() {
                 <ToggleButton value="month" sx={{ px: 2, fontWeight: 700 }}>Month</ToggleButton>
               </ToggleButtonGroup>
             </Stack>
-            <Box sx={{ height: 300, width: '100%', minWidth: 0, minHeight: 0 }}>
-              <NoSsr fallback={<Skeleton variant="rounded" height={300} sx={{ borderRadius: 4 }} />}>
-                <ResponsiveContainer>
-                  <LineChart data={revenueData}>
+            <Box sx={{ height: 320, width: '100%', minWidth: 0, position: 'relative', mt: 2 }}>
+              {isMounted ? (
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart data={revenueData} margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} />
                     <Tooltip
-                      contentStyle={{ borderRadius: 12, border: 'none', boxShadow: theme.shadows[8] }}
+                      contentStyle={{ 
+                        borderRadius: 16, 
+                        border: 'none', 
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                        padding: '12px 16px'
+                      }}
                     />
-                    <Line type="monotone" dataKey="revenue" stroke={theme.palette.primary.main} strokeWidth={4} dot={{ r: 6, fill: theme.palette.primary.main, strokeWidth: 2, stroke: '#fff' }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke={theme.palette.primary.main} 
+                      strokeWidth={4} 
+                      dot={{ r: 6, fill: theme.palette.primary.main, strokeWidth: 2, stroke: '#fff' }}
+                      activeDot={{ r: 8, strokeWidth: 0 }}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
-              </NoSsr>
+              ) : (
+                <Skeleton variant="rounded" height={320} sx={{ borderRadius: 4 }} />
+              )}
             </Box>
           </Paper>
         </Grid>
         <Grid size={{ xs: 12, lg: 4 }} sx={{ minWidth: 0 }}>
           <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider', height: '100%' }}>
             <Typography variant="h6" sx={{ fontWeight: 800, mb: 4 }}>Booking Share</Typography>
-            <Box sx={{ height: 250, width: '100%', minWidth: 0, minHeight: 0 }}>
-              <NoSsr fallback={<Skeleton variant="rounded" height={250} sx={{ borderRadius: 4 }} />}>
-                <ResponsiveContainer>
+            <Box sx={{ height: 260, width: '100%', minWidth: 0, display: 'flex', justifyContent: 'center' }}>
+              {isMounted ? (
+                <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
-                    <Pie data={bookingData} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value">
+                    <Pie 
+                      data={bookingData} 
+                      innerRadius={65} 
+                      outerRadius={85} 
+                      paddingAngle={8} 
+                      dataKey="value"
+                      stroke="none"
+                    >
                       {bookingData.map((entry, index) => (
                         <Cell key={index} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: theme.shadows[4] }} />
+                    <Tooltip contentStyle={{ borderRadius: 16, border: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }} />
                   </PieChart>
                 </ResponsiveContainer>
-              </NoSsr>
+              ) : (
+                <Skeleton variant="rounded" height={250} sx={{ borderRadius: 4 }} />
+              )}
             </Box>
             <Stack spacing={1.5} sx={{ mt: 2 }}>
               {bookingData.map((item, i) => (
@@ -318,16 +346,39 @@ export default function AdminDashboardPage() {
                     <Chip label={trip.status} size="small" variant="outlined" sx={{ fontWeight: 800 }} />
                   </Stack>
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <Box sx={{ flexGrow: 1 }}>
+                    <Box sx={{ flexGrow: 1, position: 'relative' }}>
                       <LinearProgress
                         variant="determinate"
                         value={progress}
-                        sx={{ height: 6, borderRadius: 3, bgcolor: alpha(theme.palette.divider, 0.05) }}
+                        sx={{ 
+                          height: 8, 
+                          borderRadius: 4, 
+                          bgcolor: alpha(theme.palette.divider, 0.08),
+                          '& .MuiLinearProgress-bar': {
+                            borderRadius: 4,
+                            backgroundImage: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
+                          }
+                        }}
                       />
                     </Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, minWidth: 60 }}>
-                      {filled}/{total || '—'}
-                    </Typography>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      <Chip
+                        label={`${filled} / ${total || '—'}`}
+                        size="small"
+                        sx={{ 
+                          height: 24, 
+                          fontSize: "0.7rem", 
+                          fontWeight: 900, 
+                          borderRadius: 1.5,
+                          bgcolor: progress > 80 ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.primary.main, 0.1),
+                          color: progress > 80 ? "error.main" : "primary.main",
+                          border: 'none'
+                        }}
+                      />
+                      <Typography variant="caption" sx={{ fontWeight: 800, color: progress > 0 ? "primary.main" : "text.disabled", minWidth: 35, textAlign: 'right' }}>
+                        {Math.round(progress)}%
+                      </Typography>
+                    </Stack>
                   </Stack>
                 </Box>
               )})}

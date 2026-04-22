@@ -153,7 +153,7 @@ export default function SeatSelectionPage({ params }: { params: Promise<{ id: st
     const isDriver = seat.type === 'driver'
     const isEmpty = seat.type === 'empty'
 
-    if (isEmpty) return <Box key={seat.id} sx={{ height: { xs: 48, md: 64 } }} />
+    if (isEmpty) return <Box key={seat.id} sx={{ height: { xs: 48, md: 64 }, gridColumn: String(seat.col + 1), gridRow: String(seat.row + 1) }} />
 
     if (isDriver) {
       return (
@@ -162,6 +162,8 @@ export default function SeatSelectionPage({ params }: { params: Promise<{ id: st
           elevation={0}
           sx={{
             height: { xs: 48, md: 64 },
+            gridColumn: String(seat.col + 1),
+            gridRow: String(seat.row + 1),
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -227,6 +229,8 @@ export default function SeatSelectionPage({ params }: { params: Promise<{ id: st
           bgcolor: isSelected ? 'primary.main' : isBooked ? alpha(theme.palette.divider, 0.1) : isLockedByAnotherUser ? alpha(theme.palette.warning.main, 0.05) : 'background.paper',
           color: isSelected ? 'white' : isBooked ? 'text.disabled' : isLockedByAnotherUser ? 'warning.main' : 'text.primary',
           boxShadow: isSelected ? theme.shadows[4] : 'none',
+          gridColumn: String(seat.col + 1),
+          gridRow: String(seat.row + 1),
           '&:hover': {
             bgcolor: isSelected ? 'primary.dark' : isBooked ? alpha(theme.palette.divider, 0.1) : isLockedByAnotherUser ? alpha(theme.palette.warning.main, 0.05) : alpha(theme.palette.primary.main, 0.05),
             borderColor: isSelected ? 'primary.dark' : 'divider',

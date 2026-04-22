@@ -10,9 +10,10 @@ import toast from 'react-hot-toast'
 type PaymentWithDetails = Payment & {
     booking: {
         booking_reference: string
-        profiles: {
-            full_name: string
-        }
+        contact_email?: string
+        user?: {
+            full_name?: string
+        } | null
     }
 }
 
@@ -51,12 +52,13 @@ export default function AdminPaymentsPage() {
     const filteredPayments = payments?.filter(payment =>
         payment.transaction_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         payment.booking?.booking_reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        payment.booking?.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        payment.booking?.contact_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        payment.booking?.user?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'success': return 'bg-green-500/20 text-green-400'
+            case 'succeeded': return 'bg-green-500/20 text-green-400'
             case 'failed': return 'bg-red-500/20 text-red-400'
             case 'pending': return 'bg-yellow-500/20 text-yellow-400'
             case 'refunded': return 'bg-blue-500/20 text-blue-400'
@@ -66,7 +68,7 @@ export default function AdminPaymentsPage() {
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case 'success': return <CheckCircle className="w-4 h-4 text-green-400" />
+            case 'succeeded': return <CheckCircle className="w-4 h-4 text-green-400" />
             case 'failed': return <XCircle className="w-4 h-4 text-red-400" />
             case 'pending': return <Clock className="w-4 h-4 text-yellow-400" />
             case 'refunded': return <CreditCard className="w-4 h-4 text-blue-400" />
@@ -80,7 +82,7 @@ export default function AdminPaymentsPage() {
         const csvData = filteredPayments.map(payment => ({
             'Transaction ID': payment.transaction_id,
             'Booking Ref': payment.booking?.booking_reference || 'N/A',
-            'Customer': payment.booking?.profiles?.full_name || 'N/A',
+            'Customer': payment.booking?.user?.full_name || payment.booking?.contact_email || 'N/A',
             'Amount': payment.amount,
             'Currency': payment.currency,
             'Gateway': payment.gateway,
@@ -104,7 +106,7 @@ export default function AdminPaymentsPage() {
 
     const totalRevenue = filteredPayments?.reduce((sum, payment) => {
         if (payment.status === 'succeeded') {
-            return sum + (payment.amount || 0)
+            return sum + (Number(payment.amount) || 0)
         }
         return sum
     }, 0) || 0
@@ -181,7 +183,7 @@ export default function AdminPaymentsPage() {
                         className="input-field"
                     >
                         <option value="all">All Status</option>
-                        <option value="success">Success</option>
+                        <option value="succeeded">Success</option>
                         <option value="pending">Pending</option>
                         <option value="failed">Failed</option>
                         <option value="refunded">Refunded</option>
@@ -229,8 +231,7 @@ export default function AdminPaymentsPage() {
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-slate-700">
-                                    <th className="text-left p-4">Transaction</th>
-                                    <th className="text-left p-4">Booking</th>
+                                    <th className="text-left p-4">Transaction & Booking</th>
                                     <th className="text-left p-4">Customer</th>
                                     <th className="text-left p-4">Amount</th>
                                     <th className="text-left p-4">Gateway</th>
@@ -244,19 +245,17 @@ export default function AdminPaymentsPage() {
                                         <td className="p-4">
                                             <div>
                                                 <div className="font-medium font-mono text-sm">{payment.transaction_id}</div>
-                                                <div className="text-xs text-slate-400">{payment.gateway}</div>
+                                                <div className="text-xs text-slate-400 font-medium">Ref: {payment.booking?.booking_reference}</div>
                                             </div>
                                         </td>
                                         <td className="p-4">
-                                            <div className="font-medium">{payment.booking?.booking_reference}</div>
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="font-medium">{payment.booking?.profiles?.full_name || 'N/A'}</div>
+                                            <div className="font-medium">{payment.booking?.user?.full_name || 'Customer'}</div>
+                                            <div className="text-xs text-slate-400">{payment.booking?.contact_email}</div>
                                         </td>
                                         <td className="p-4">
                                             <div className="font-medium flex items-center">
                                                 <IndianRupee className="w-3 h-3" />
-                                                {payment.amount}
+                                                {Number(payment.amount).toLocaleString()}
                                                 <span className="text-xs text-slate-400 ml-1 uppercase">{payment.currency}</span>
                                             </div>
                                         </td>
@@ -275,10 +274,10 @@ export default function AdminPaymentsPage() {
                                         </td>
                                         <td className="p-4">
                                             <div className="text-sm">
-                                                {new Date(payment.created_at).toLocaleDateString()}
+                                                {new Date(payment.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                                                 <br />
                                                 <span className="text-xs text-slate-400">
-                                                    {new Date(payment.created_at).toLocaleTimeString()}
+                                                    {new Date(payment.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
                                         </td>

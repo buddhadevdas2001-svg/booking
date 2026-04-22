@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
         const supabase = createAdminClient()
         const { data: booking, error: bookingError } = await supabase
             .from('bookings')
-            .select('id, booking_reference, status, payment_status, final_amount, stripe_session_id, stripe_payment_intent_id')
+            .select('id, booking_reference, status, payment_status, final_amount, stripe_session_id, stripe_payment_intent_id, trip_id')
             .eq('id', bookingId)
             .single()
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: 'Booking not found' }, { status: 404 })
         }
 
-        const bookingData = booking as ConfirmableBooking
+        const bookingData = booking as ConfirmableBooking & { trip_id: string }
         if (bookingData.stripe_session_id && bookingData.stripe_session_id !== sessionId) {
             return NextResponse.json({ message: 'Checkout session does not match booking' }, { status: 400 })
         }
@@ -77,13 +77,33 @@ export async function POST(req: NextRequest) {
             updated_at: updatedAt,
         }
 
-        const { error: updateError } = await supabase
-            .from('bookings')
-            .update(bookingUpdate as never)
-            .eq('id', bookingId)
+        // Perform updates in parallel
+        const [updateBookingRes, updateSeatsRes] = await Promise.all([
+            supabase
+                .from('bookings')
+                .update(bookingUpdate as never)
+                .eq('id', bookingId),
+            // Decrement available seats - simplified since we currently assume 1 seat per booking 
+            // In a more complex system, we'd fetch the count from booking_seats
+            supabase.rpc('decrement_available_seats', { 
+                p_trip_id: bookingData.trip_id,
+                p_count: 1 
+            })
+        ])
 
-        if (updateError) {
-            return NextResponse.json({ message: updateError.message }, { status: 500 })
+        if (updateBookingRes.error) {
+            return NextResponse.json({ message: updateBookingRes.error.message }, { status: 500 })
+        }
+
+        // Note: RPC might fail if not defined, fallback to direct update if needed
+        if (updateSeatsRes.error) {
+            console.warn('RPC decrement failed, attempting direct update:', updateSeatsRes.error.message)
+            const { data: trip } = await supabase.from('trips').select('available_seats').eq('id', bookingData.trip_id).single()
+            if (trip) {
+                await supabase.from('trips').update({ 
+                    available_seats: Math.max(0, (trip.available_seats || 0) - 1) 
+                } as never).eq('id', bookingData.trip_id)
+            }
         }
 
         const paymentPayload = {

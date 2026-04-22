@@ -118,7 +118,7 @@ function BookingSuccessContent() {
     setPdfLoading(true)
     try {
       await generateETicketPDF(
-        booking as any,
+        booking as unknown as Parameters<typeof generateETicketPDF>[0],
         route || {},
         bus || {},
         trip || {},

@@ -15,6 +15,7 @@ type AdminAccessResult =
     }
 
 export async function requireAdminRequest(): Promise<AdminAccessResult> {
+  // Use cookie-based server client for auth — does NOT need service role key
   const supabase = await createClient()
   const {
     data: { user },
