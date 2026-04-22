@@ -32,6 +32,7 @@ import type { Booking } from '@/types/supabase'
 type AdminBookingRow = Booking & {
   user?: {
     email?: string | null
+    full_name?: string | null
   } | null
   trip?: {
     departure_time?: string | null
