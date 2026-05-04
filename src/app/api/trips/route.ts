@@ -22,9 +22,9 @@ export async function GET(req: NextRequest) {
             .gt('departure_time', nowUtc)  // Only show trips that haven't departed yet
             .order('departure_time', { ascending: true })
 
-        if (date) {
-            query = query.gte('departure_time', `${date}T00:00:00`).lte('departure_time', `${date}T23:59:59`)
-        }
+        // Default to today if no date is provided
+        const searchDate = date || new Date().toISOString().split('T')[0]
+        query = query.gte('departure_time', `${searchDate}T00:00:00`).lte('departure_time', `${searchDate}T23:59:59`)
 
         if (from) {
             query = query.ilike('route.origin', `%${from}%`)
@@ -33,6 +33,9 @@ export async function GET(req: NextRequest) {
         if (to) {
             query = query.ilike('route.destination', `%${to}%`)
         }
+        
+        // Safety limit
+        query = query.limit(50)
 
         const { data, error } = await query
         if (error) throw error

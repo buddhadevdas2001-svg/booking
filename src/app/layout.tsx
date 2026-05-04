@@ -31,12 +31,15 @@ export default function RootLayout({
             <Toaster
               position="top-right"
               toastOptions={{
-                className: '',
                 style: {
-                  background: '#1e293b',
-                  color: '#f8fafc',
-                  border: '1px solid #334155',
+                  background: 'var(--toast-bg)',
+                  color: 'var(--toast-color)',
+                  border: '1px solid var(--toast-border)',
                   borderRadius: '12px',
+                  padding: '12px 16px',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                 },
                 success: {
                   iconTheme: { primary: '#22c55e', secondary: '#1e293b' },

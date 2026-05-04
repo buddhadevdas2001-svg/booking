@@ -9,6 +9,9 @@
   --brand-yellow: #f5b433;
   --surface: #f8fafc;
   --border: #e2e8f0;
+  --toast-bg: #ffffff;
+  --toast-color: #1e293b;
+  --toast-border: rgba(0,0,0,0.05);
 }
 
 [data-theme="dark"] {

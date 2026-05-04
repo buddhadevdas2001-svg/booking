@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
         }
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        const baseUrl = req.nextUrl.origin
         
         // Create Stripe Checkout Session
         const session = await stripe.checkout.sessions.create({

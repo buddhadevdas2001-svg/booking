@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { requireAdminRequest } from '@/lib/admin-auth'
+import { seedDatabase } from '@/lib/seed-admin'
 
 type BookingMetricRow = {
     final_amount: number | null
@@ -22,6 +23,13 @@ export async function GET() {
     const auth = await requireAdminRequest()
     if (!auth.ok) return auth.response
     const supabase = await getDbClient()
+
+    // 1. Check if database is empty (no buses)
+    const { count } = await supabase.from('buses').select('*', { count: 'exact', head: true })
+    if (count === 0) {
+        console.log('Database is empty. Auto-seeding for permanent solution...')
+        await seedDatabase(supabase)
+    }
 
     const [bookingsCountRes, confirmedBookingsRes, busesCountRes, usersCountRes, bookingsListRes, tripsRes] = await Promise.all([
         supabase.from('bookings').select('id', { count: 'exact', head: true }),

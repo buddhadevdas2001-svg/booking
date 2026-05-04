@@ -44,9 +44,9 @@ export default function ThemeRegistry({ children }: { children: React.ReactNode 
       palette: {
         mode: isDark ? 'dark' : 'light',
         primary: {
-          main: isDark ? '#60a5fa' : '#3969c5', // Blue 400 in dark, custom blue in light
-          light: isDark ? '#93c5fd' : '#4f82e3',
-          dark: isDark ? '#2563eb' : '#254ba7',
+          main: isDark ? '#60a5fa' : '#2563eb', // Blue 400 in dark, Blue 600 in light
+          light: isDark ? '#93c5fd' : '#3b82f6',
+          dark: isDark ? '#2563eb' : '#1d4ed8',
           contrastText: isDark ? '#0f172a' : '#ffffff',
         },
         secondary: {
@@ -57,11 +57,11 @@ export default function ThemeRegistry({ children }: { children: React.ReactNode 
         },
         background: {
           default: isDark ? '#0f172a' : '#ffffff', // Slate 950 in dark
-          paper: isDark ? '#1e293b' : '#f8fafc',    // Slate 800 in dark
+          paper: isDark ? '#1e293b' : '#ffffff',    // Solid white in light
         },
         text: {
-          primary: isDark ? '#f1f5f9' : '#111827',
-          secondary: isDark ? '#94a3b8' : '#64748b',
+          primary: isDark ? '#f1f5f9' : '#0f172a',
+          secondary: isDark ? '#94a3b8' : '#475569', // Darker slate in light mode
         },
         divider: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
       },
