@@ -64,7 +64,7 @@ export default function NewTripPage() {
         queryFn: () => getAdminBuses() 
     })
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
         setForm((prev) => {
             const next = { ...prev, [name]: value }
@@ -186,7 +186,7 @@ export default function NewTripPage() {
 
                 <Grid container spacing={4}>
                     {/* Basic Info */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             select
                             fullWidth
@@ -209,7 +209,7 @@ export default function NewTripPage() {
                         </TextField>
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             select
                             fullWidth
@@ -232,12 +232,12 @@ export default function NewTripPage() {
                         </TextField>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Divider sx={{ my: 1 }} />
                     </Grid>
 
                     {/* Schedule */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             fullWidth
                             required
@@ -254,7 +254,7 @@ export default function NewTripPage() {
                         />
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Box sx={{ position: 'relative' }}>
                             <TextField
                                 fullWidth
@@ -297,7 +297,7 @@ export default function NewTripPage() {
                     </Grid>
 
                     {/* Pricing and Status */}
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             fullWidth
                             required
@@ -313,7 +313,7 @@ export default function NewTripPage() {
                         />
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             select
                             fullWidth
@@ -333,7 +333,7 @@ export default function NewTripPage() {
                         </TextField>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
                             <Button 
                                 component={Link} 

@@ -18,11 +18,13 @@ interface BookingState {
     selectedSeats: Seat[]
     lockedSeats: string[]
     sessionId: string
+    expiresAt: string | null
     setTripId: (tripId: string | null) => void
     toggleSeat: (seat: Seat) => void
     clearSeats: () => void
     setLockedSeats: (seats: string[] | ((prev: string[]) => string[])) => void
     setSessionId: (sessionId: string) => void
+    setExpiresAt: (expiresAt: string | null) => void
     isSeatLocked: (seatLabel: string) => boolean
 }
 export const useBookingStore = create<BookingState>()(
@@ -32,6 +34,7 @@ export const useBookingStore = create<BookingState>()(
             selectedSeats: [],
             lockedSeats: [],
             sessionId: '',
+            expiresAt: null,
             setTripId: (tripId) =>
                 set((state) => (
                     state.tripId === tripId
@@ -53,6 +56,7 @@ export const useBookingStore = create<BookingState>()(
                     lockedSeats: typeof seats === 'function' ? seats(state.lockedSeats) : seats,
                 })),
             setSessionId: (sessionId) => set({ sessionId }),
+            setExpiresAt: (expiresAt) => set({ expiresAt }),
             isSeatLocked: (seatLabel) => get().lockedSeats.includes(seatLabel),
         }),
         { name: 'booking-store' }
