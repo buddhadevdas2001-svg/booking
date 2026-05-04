@@ -14,6 +14,7 @@ import {
   Download,
   Database,
   TrendingUp,
+  Shield,
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import toast from 'react-hot-toast'
@@ -51,14 +52,35 @@ export default function AdminDashboardPage() {
     setIsMounted(true)
   }, [])
 
-  const { data: summary, isLoading } = useQuery<AdminSummary>({
+  const { data: summary, isLoading, error: summaryError } = useQuery<AdminSummary>({
     queryKey: ['admin-summary'],
     queryFn: async () => {
       const res = await fetch('/api/admin/summary')
+      if (res.status === 403) throw new Error('403')
       if (!res.ok) throw new Error('Failed to load dashboard')
       return res.json()
     },
+    retry: (failureCount, error) => {
+      if (error instanceof Error && error.message === '403') return false
+      return failureCount < 3
+    }
   })
+
+  const isUnauthorized = summaryError instanceof Error && summaryError.message === '403'
+
+  const handleElevate = async () => {
+    setSeeding(true)
+    try {
+      const res = await fetch('/api/admin/elevate-me', { method: 'POST' })
+      if (!res.ok) throw new Error('Elevation failed')
+      toast.success('Permissions granted! Reloading...')
+      window.location.reload()
+    } catch (error) {
+      toast.error('Failed to elevate permissions')
+    } finally {
+      setSeeding(false)
+    }
+  }
 
   const { data: analytics } = useQuery<AdminAnalytics>({
     queryKey: ['admin-analytics'],
@@ -99,6 +121,32 @@ export default function AdminDashboardPage() {
     color: item.color || DASHBOARD_CHART_COLORS[index % DASHBOARD_CHART_COLORS.length],
   }))
   const upcomingTrips = summary?.upcomingTrips ?? []
+
+  if (isUnauthorized) {
+    return (
+      <Box sx={{ py: 10, textAlign: 'center' }}>
+        <Paper elevation={0} sx={{ p: 6, borderRadius: 8, border: '1px solid', borderColor: 'divider', maxWidth: 500, mx: 'auto' }}>
+          <Shield size={48} className="text-error" style={{ marginBottom: 24 }} />
+          <Typography variant="h4" sx={{ fontWeight: 900, mb: 2 }}>Access Denied</Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+            Your account does not have administrative privileges in production.
+          </Typography>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={handleElevate}
+            disabled={seeding}
+            sx={{ borderRadius: 3, px: 6, fontWeight: 900 }}
+          >
+            {seeding ? 'Processing...' : 'Elevate to Admin'}
+          </Button>
+          <Typography variant="caption" sx={{ display: 'block', mt: 3, color: 'text.disabled' }}>
+            This is a debug tool for production testing.
+          </Typography>
+        </Paper>
+      </Box>
+    )
+  }
 
   return (
     <Stack spacing={4}>

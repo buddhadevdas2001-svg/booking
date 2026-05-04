@@ -81,7 +81,7 @@ function BookingSuccessContent() {
     if (!bookingId && !isLoading) router.push('/dashboard')
   }, [bookingId, isLoading, router])
 
-  if (isLoading || !booking) {
+  if (isLoading) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         <Navbar />
@@ -89,6 +89,19 @@ function BookingSuccessContent() {
           <Skeleton variant="circular" width={80} height={80} sx={{ mx: 'auto', mb: 4 }} />
           <Skeleton width="60%" height={40} sx={{ mx: 'auto', mb: 2 }} />
           <Skeleton width="40%" height={24} sx={{ mx: 'auto' }} />
+        </Container>
+      </Box>
+    )
+  }
+
+  if (!booking) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+        <Navbar />
+        <Container maxWidth="md" sx={{ pt: 20, textAlign: 'center' }}>
+          <Typography variant="h5" color="error" gutterBottom>Booking Not Found</Typography>
+          <Typography variant="body1" sx={{ mb: 4 }}>We couldn't retrieve the details for this booking reference.</Typography>
+          <Button variant="contained" component={Link} href="/dashboard">Go to My Bookings</Button>
         </Container>
       </Box>
     )

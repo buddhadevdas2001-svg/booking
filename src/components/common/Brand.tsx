@@ -97,7 +97,7 @@ export default function Brand({
               fontWeight: 800,
               fontSize: compact ? '1.45rem' : '2.05rem',
               letterSpacing: '-0.05em',
-              color: dark ? 'white' : 'slate.900',
+              color: dark ? 'white' : 'text.primary',
               transition: 'color 0.3s ease',
             }}
           >

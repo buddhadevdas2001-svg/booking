@@ -1,9 +1,32 @@
 'use client'
 
-import { use, useEffect, useMemo, useState } from 'react'
+import { use, useEffect, useMemo, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
+import {
+    Box,
+    Container,
+    Typography,
+    Paper,
+    Stack,
+    Button,
+    Grid,
+    TextField,
+    Divider,
+    IconButton,
+    Chip,
+    alpha,
+    useTheme,
+    Skeleton,
+    Avatar,
+    InputAdornment,
+    FormControl,
+    RadioGroup,
+    FormControlLabel,
+    Radio,
+    Fade,
+} from '@mui/material'
 import {
     ArrowLeft,
     Bus,
@@ -18,6 +41,7 @@ import {
     Tag,
     Users,
     X,
+    Info,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Navbar from '@/components/common/Navbar'
@@ -33,11 +57,62 @@ type AppliedCoupon = {
     description?: string
 }
 
+// SeatHoldTimer Component
+function SeatHoldTimer({ expiresAt, onExpire }: { expiresAt: string | null, onExpire: () => void }) {
+    const [timeLeft, setTimeLeft] = useState<number | null>(null)
+    const theme = useTheme()
+
+    useEffect(() => {
+        if (!expiresAt) return
+
+        const update = () => {
+            const diff = new Date(expiresAt).getTime() - Date.now()
+            if (diff <= 0) {
+                setTimeLeft(0)
+                onExpire()
+                return
+            }
+            setTimeLeft(Math.floor(diff / 1000))
+        }
+
+        update()
+        const interval = setInterval(update, 1000)
+        return () => clearInterval(interval)
+    }, [expiresAt, onExpire])
+
+    if (timeLeft === null) return null
+
+    const minutes = Math.floor(timeLeft / 60)
+    const seconds = timeLeft % 60
+    const isCritical = timeLeft < 60
+
+    return (
+        <Chip
+            icon={<Clock size={16} color={isCritical ? theme.palette.error.main : theme.palette.warning.main} />}
+            label={`${minutes}:${seconds.toString().padStart(2, '0')} left`}
+            sx={{
+                fontWeight: 900,
+                bgcolor: isCritical ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.warning.main, 0.1),
+                color: isCritical ? 'error.main' : 'warning.main',
+                border: '1px solid',
+                borderColor: isCritical ? 'error.main' : 'warning.main',
+                animation: isCritical ? 'pulse 1.5s infinite' : 'none',
+                '@keyframes pulse': {
+                    '0%': { opacity: 1 },
+                    '50%': { opacity: 0.6 },
+                    '100%': { opacity: 1 },
+                },
+            }}
+        />
+    )
+}
+
 export default function CheckoutPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router = useRouter()
+    const theme = useTheme()
     const { user } = useAuthStore()
-    const { selectedSeats, clearSeats, sessionId } = useBookingStore()
+    const { selectedSeats, clearSeats, sessionId, expiresAt } = useBookingStore()
     const [loading, setLoading] = useState(false)
     const [passengerDetails, setPassengerDetails] = useState<Record<string, { name: string; age: string }>>({})
     const [contactInfo, setContactInfo] = useState({
@@ -45,7 +120,6 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
         phone: user?.phone || '',
     })
 
-    // Coupon state
     const [couponCode, setCouponCode] = useState('')
     const [couponLoading, setCouponLoading] = useState(false)
     const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null)
@@ -80,6 +154,12 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
         }
     }, [selectedSeats, router, id, isLoading])
 
+    const handleExpire = useCallback(() => {
+        toast.error('Seat hold session expired. Please reselect your seats.')
+        clearSeats()
+        router.push(`/book/${id}`)
+    }, [clearSeats, id, router])
+
     const updatePassenger = (seatId: string, field: 'name' | 'age', value: string) => {
         setPassengerDetails((prev) => ({
             ...prev,
@@ -106,9 +186,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                 body: JSON.stringify({ code: couponCode.trim(), cartTotal: subtotal }),
             })
             const data = await res.json()
-            if (!res.ok) {
-                throw new Error(data.message || 'Invalid coupon')
-            }
+            if (!res.ok) throw new Error(data.message || 'Invalid coupon')
             setAppliedCoupon(data.coupon)
             setCouponDiscount(data.discountAmount)
             toast.success(`Coupon applied! You save ₹${data.discountAmount.toLocaleString()}`)
@@ -128,19 +206,14 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
 
     const handlePayment = async () => {
         if (!user) {
-            toast.error('Please login to continue')
             router.push(`/auth/login?redirect=/checkout/${id}`)
             return
         }
 
         for (const seat of selectedSeats) {
             const details = passengerDetails[seat.id]
-            if (!details?.name.trim()) {
-                toast.error(`Please enter passenger name for seat ${seat.label}`)
-                return
-            }
-            if (!details?.age.trim()) {
-                toast.error(`Please enter passenger age for seat ${seat.label}`)
+            if (!details?.name.trim() || !details?.age.trim()) {
+                toast.error(`Please complete passenger details for seat ${seat.label}`)
                 return
             }
         }
@@ -150,25 +223,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
             return
         }
 
-        if (!sessionId) {
-            toast.error('Booking session expired. Please reselect your seats.')
-            router.push(`/book/${id}`)
-            return
-        }
-
         setLoading(true)
         try {
-            const locked = await lockSeats({
-                tripId: id,
-                seatLabels: selectedSeats.map((seat) => seat.label),
-                sessionId,
-                durationMinutes: 5,
-            })
-
-            if (locked.failed_seats.length > 0) {
-                throw new Error(`Some seats are no longer available: ${locked.failed_seats.join(', ')}`)
-            }
-
             const booking = await createPendingBooking({
                 userId: user.id,
                 tripId: id,
@@ -192,8 +248,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
 
             await createCheckoutSession(booking.id)
         } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to create booking'
-            toast.error(message)
+            toast.error(err instanceof Error ? err.message : 'Failed to create booking')
         } finally {
             setLoading(false)
         }
@@ -201,309 +256,291 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-slate-950">
+            <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
                 <Navbar />
-                <div className="flex h-screen items-center justify-center">
-                    <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-500"></div>
-                </div>
-            </div>
+                <Container sx={{ pt: 20, textAlign: 'center' }}>
+                    <Skeleton variant="rounded" height={400} sx={{ borderRadius: 4 }} />
+                </Container>
+            </Box>
         )
     }
 
     return (
-        <div className="min-h-screen bg-slate-950">
+        <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
             <Navbar />
 
-            <main className="pt-24 pb-12">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <Link href={`/book/${id}`} className="mb-6 inline-flex items-center gap-2 text-slate-400 transition-colors hover:text-white">
-                        <ArrowLeft size={18} />
-                        <span>Back to seat selection</span>
-                    </Link>
+            <Container maxWidth="lg" sx={{ pt: { xs: 12, md: 16 }, pb: 10 }}>
+                <Link href={`/book/${id}`} style={{ textDecoration: 'none' }}>
+                    <Button
+                        startIcon={<ArrowLeft size={18} />}
+                        sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' }, mb: 4, fontWeight: 700 }}
+                    >
+                        Back to seat selection
+                    </Button>
+                </Link>
 
-                    <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-                        <div className="space-y-6 lg:col-span-2">
-                            {/* Passenger Details */}
-                            <div className="card">
-                                <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white">
-                                    <Users size={20} className="text-blue-500" />
+                <Grid container spacing={4}>
+                    {/* Left Column: Passenger Details */}
+                    <Grid item xs={12} lg={8}>
+                        <Stack spacing={4}>
+                            {/* Seat Hold Warning */}
+                            <Paper
+                                elevation={0}
+                                sx={{
+                                    p: 3,
+                                    borderRadius: 4,
+                                    bgcolor: alpha(theme.palette.primary.main, 0.05),
+                                    border: '1px solid',
+                                    borderColor: alpha(theme.palette.primary.main, 0.1),
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <Stack direction="row" spacing={2} alignItems="center">
+                                    <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'primary.main', color: 'white' }}>
+                                        <Clock size={20} />
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Seat Hold Active</Typography>
+                                        <Typography variant="caption" color="text.secondary">Your selection is reserved for 5 minutes.</Typography>
+                                    </Box>
+                                </Stack>
+                                <SeatHoldTimer expiresAt={expiresAt} onExpire={handleExpire} />
+                            </Paper>
+
+                            {/* Passenger Forms */}
+                            <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider' }}>
+                                <Typography variant="h5" sx={{ fontWeight: 900, mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Users size={24} className="text-primary" />
                                     Passenger Details
-                                </h2>
-                                <p className="mb-6 text-sm text-slate-400">Please enter details for each passenger as per government ID</p>
-
-                                <div className="space-y-6">
+                                </Typography>
+                                <Stack spacing={3}>
                                     {selectedSeats.map((seat) => (
-                                        <div key={seat.id} className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
-                                            <div className="mb-4 flex items-center gap-3">
-                                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600/20">
-                                                    <span className="font-bold text-blue-400">{seat.label}</span>
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium text-white">Seat {seat.label}</p>
-                                                    <p className="text-xs capitalize text-slate-400">
-                                                        {seat.type} - {seat.deck} deck
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                                <div>
-                                                    <label className="label text-xs">Full Name</label>
-                                                    <input
-                                                        type="text"
+                                        <Paper
+                                            key={seat.id}
+                                            variant="outlined"
+                                            sx={{ p: 3, borderRadius: 4, bgcolor: alpha(theme.palette.background.paper, 0.5) }}
+                                        >
+                                            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                                                <Avatar sx={{ bgcolor: 'primary.main', fontWeight: 900, fontSize: '0.9rem' }}>
+                                                    {seat.label}
+                                                </Avatar>
+                                                <Box>
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Seat {seat.label}</Typography>
+                                                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
+                                                        {seat.type} · {seat.deck} Deck
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
+                                            <Grid container spacing={3}>
+                                                <Grid item xs={12} sm={8}>
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Full Name"
+                                                        variant="outlined"
+                                                        placeholder="As per Government ID"
                                                         value={passengerDetails[seat.id]?.name || ''}
                                                         onChange={(e) => updatePassenger(seat.id, 'name', e.target.value)}
-                                                        placeholder="As per ID proof"
-                                                        className="input py-2.5 text-sm"
-                                                        required
+                                                        InputProps={{ sx: { borderRadius: 3, fontWeight: 600 } }}
                                                     />
-                                                </div>
-                                                <div>
-                                                    <label className="label text-xs">Age</label>
-                                                    <input
+                                                </Grid>
+                                                <Grid item xs={12} sm={4}>
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Age"
                                                         type="number"
+                                                        variant="outlined"
                                                         value={passengerDetails[seat.id]?.age || ''}
                                                         onChange={(e) => updatePassenger(seat.id, 'age', e.target.value)}
-                                                        placeholder="Age in years"
-                                                        className="input py-2.5 text-sm"
-                                                        min="1"
-                                                        max="120"
-                                                        required
+                                                        InputProps={{ sx: { borderRadius: 3, fontWeight: 600 } }}
                                                     />
-                                                </div>
-                                            </div>
-                                        </div>
+                                                </Grid>
+                                            </Grid>
+                                        </Paper>
                                     ))}
-                                </div>
-                            </div>
+                                </Stack>
+                            </Paper>
 
-                            {/* Contact Information */}
-                            <div className="card">
-                                <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white">
-                                    <Phone size={20} className="text-blue-500" />
-                                    Contact Information
-                                </h2>
+                            {/* Contact Info */}
+                            <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider' }}>
+                                <Typography variant="h5" sx={{ fontWeight: 900, mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Phone size={24} className="text-primary" />
+                                    Contact Details
+                                </Typography>
+                                <Grid container spacing={3}>
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField
+                                            fullWidth
+                                            label="Email Address"
+                                            placeholder="your@email.com"
+                                            value={contactInfo.email}
+                                            onChange={(e) => setContactInfo(p => ({ ...p, email: e.target.value }))}
+                                            InputProps={{
+                                                startAdornment: <InputAdornment position="start"><Mail size={18} /></InputAdornment>,
+                                                sx: { borderRadius: 3, fontWeight: 600 }
+                                            }}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField
+                                            fullWidth
+                                            label="Phone Number"
+                                            placeholder="9876543210"
+                                            value={contactInfo.phone}
+                                            onChange={(e) => setContactInfo(p => ({ ...p, phone: e.target.value }))}
+                                            InputProps={{
+                                                startAdornment: <InputAdornment position="start"><Phone size={18} /></InputAdornment>,
+                                                sx: { borderRadius: 3, fontWeight: 600 }
+                                            }}
+                                        />
+                                    </Grid>
+                                </Grid>
+                            </Paper>
 
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    <div>
-                                        <label className="label text-xs">Email Address</label>
-                                        <div className="relative">
-                                            <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                                            <input
-                                                type="email"
-                                                value={contactInfo.email}
-                                                onChange={(e) => setContactInfo((prev) => ({ ...prev, email: e.target.value }))}
-                                                className="input input-with-icon"
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="label text-xs">Phone Number</label>
-                                        <div className="relative">
-                                            <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                                            <input
-                                                type="tel"
-                                                value={contactInfo.phone}
-                                                onChange={(e) => setContactInfo((prev) => ({ ...prev, phone: e.target.value }))}
-                                                className="input input-with-icon"
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Coupon Code Section */}
-                            <div className="card">
-                                <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white">
-                                    <Tag size={20} className="text-blue-500" />
-                                    Apply Coupon
-                                </h2>
-
+                            {/* Coupon Section */}
+                            <Paper elevation={0} sx={{ p: 4, borderRadius: 6, border: '1px solid', borderColor: 'divider' }}>
+                                <Typography variant="h6" sx={{ fontWeight: 900, mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Tag size={20} className="text-primary" />
+                                    Offers & Coupons
+                                </Typography>
                                 {appliedCoupon ? (
-                                    <div className="flex items-center justify-between rounded-xl border border-green-500/30 bg-green-500/10 p-4">
-                                        <div className="flex items-center gap-3">
-                                            <CheckCircle2 size={20} className="text-green-400" />
-                                            <div>
-                                                <p className="font-bold text-green-400 font-mono tracking-wider">{appliedCoupon.code}</p>
-                                                <p className="text-xs text-slate-400">
-                                                    {appliedCoupon.description || (
-                                                        appliedCoupon.discount_type === 'percentage'
-                                                            ? `${appliedCoupon.discount_value}% discount applied`
-                                                            : `₹${appliedCoupon.discount_value} discount applied`
-                                                    )}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className="font-bold text-green-400 text-lg">-₹{couponDiscount.toLocaleString()}</span>
-                                            <button
-                                                onClick={handleRemoveCoupon}
-                                                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
-                                            >
-                                                <X size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
+                                    <Fade in>
+                                        <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, bgcolor: alpha(theme.palette.success.main, 0.05), borderColor: 'success.main', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <Stack direction="row" spacing={2} alignItems="center">
+                                                <CheckCircle2 color={theme.palette.success.main} size={24} />
+                                                <Box>
+                                                    <Typography variant="subtitle2" sx={{ fontWeight: 900, color: 'success.main' }}>{appliedCoupon.code} APPLIED</Typography>
+                                                    <Typography variant="caption" color="text.secondary">{appliedCoupon.description || 'Savings applied successfully!'}</Typography>
+                                                </Box>
+                                            </Stack>
+                                            <Stack direction="row" spacing={2} alignItems="center">
+                                                <Typography variant="h6" sx={{ fontWeight: 900, color: 'success.main' }}>-₹{couponDiscount}</Typography>
+                                                <IconButton size="small" onClick={handleRemoveCoupon}><X size={16} /></IconButton>
+                                            </Stack>
+                                        </Paper>
+                                    </Fade>
                                 ) : (
-                                    <div className="flex gap-3">
-                                        <div className="relative flex-1">
-                                            <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                                            <input
-                                                type="text"
-                                                value={couponCode}
-                                                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                                                onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
-                                                placeholder="Enter coupon code"
-                                                className="input input-with-icon uppercase font-mono tracking-widest"
-                                            />
-                                        </div>
-                                        <button
-                                            onClick={handleApplyCoupon}
+                                    <Stack direction="row" spacing={2}>
+                                        <TextField
+                                            fullWidth
+                                            placeholder="PROMOCODE"
+                                            value={couponCode}
+                                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                            InputProps={{
+                                                startAdornment: <InputAdornment position="start"><Tag size={18} /></InputAdornment>,
+                                                sx: { borderRadius: 3, fontWeight: 800, letterSpacing: '0.1em' }
+                                            }}
+                                        />
+                                        <Button
+                                            variant="contained"
                                             disabled={couponLoading || !couponCode.trim()}
-                                            className="btn-primary px-6 disabled:opacity-50"
+                                            onClick={handleApplyCoupon}
+                                            sx={{ borderRadius: 3, px: 4, fontWeight: 900 }}
                                         >
-                                            {couponLoading ? (
-                                                <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
-                                            ) : 'Apply'}
-                                        </button>
-                                    </div>
+                                            {couponLoading ? '...' : 'APPLY'}
+                                        </Button>
+                                    </Stack>
                                 )}
-                            </div>
+                            </Paper>
+                        </Stack>
+                    </Grid>
 
-                            {/* Payment Method */}
-                            <div className="card">
-                                <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-white">
-                                    <CreditCard size={20} className="text-blue-500" />
-                                    Payment Method
-                                </h2>
+                    {/* Right Column: Summary */}
+                    <Grid item xs={12} lg={4}>
+                        <Paper elevation={0} sx={{ p: 4, borderRadius: 8, border: '1px solid', borderColor: 'divider', position: 'sticky', top: 100, bgcolor: alpha(theme.palette.background.paper, 0.8), backdropFilter: 'blur(20px)' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 900, mb: 4 }}>Booking Summary</Typography>
+                            
+                            <Stack spacing={3} sx={{ mb: 4 }}>
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Bus Info</Typography>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 900, mt: 0.5 }}>{trip?.bus?.name}</Typography>
+                                    <Typography variant="body2" color="text.secondary">{trip?.bus?.bus_type}</Typography>
+                                </Box>
 
-                                <div className="space-y-3">
-                                    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-700 p-3 transition-colors hover:border-blue-500">
-                                        <input type="radio" name="payment" defaultChecked className="h-4 w-4 text-blue-600" />
-                                        <div className="flex flex-1 items-center justify-between">
-                                            <span className="font-medium text-white">Stripe Checkout</span>
-                                            <div className="flex gap-1">
-                                                <span className="text-xs text-slate-500">Cards</span>
-                                                <span className="text-xs text-slate-500">UPI</span>
-                                            </div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Route & Time</Typography>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 900, mt: 0.5 }}>
+                                        {trip?.route?.origin} → {trip?.route?.destination}
+                                    </Typography>
+                                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                                        <Calendar size={14} className="text-primary" />
+                                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                            {trip?.departure_time ? new Date(trip.departure_time).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                                        </Typography>
+                                        <Divider orientation="vertical" flexItem sx={{ height: 12, my: 'auto' }} />
+                                        <Clock size={14} className="text-primary" />
+                                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                            {trip?.departure_time ? new Date(trip.departure_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                        </Typography>
+                                    </Stack>
+                                </Box>
 
-                        {/* Booking Summary Sidebar */}
-                        <div className="space-y-6">
-                            <div className="card sticky top-24">
-                                <h3 className="mb-4 font-bold text-white">Booking Summary</h3>
-
-                                <div className="space-y-3 border-b border-slate-800 pb-4">
-                                    <div className="flex items-center gap-2 text-sm text-slate-400">
-                                        <Bus size={14} />
-                                        <span>{trip?.bus?.name}</span>
-                                    </div>
-                                    <div>
-                                        <p className="font-medium text-white">
-                                            {trip?.route?.origin} &rarr; {trip?.route?.destination}
-                                        </p>
-                                        <p className="text-xs text-slate-400">
-                                            {trip?.departure_time
-                                                ? `${new Date(trip.departure_time).toLocaleDateString('en-IN', {
-                                                      weekday: 'short',
-                                                      day: 'numeric',
-                                                      month: 'short',
-                                                  })}, ${new Date(trip.departure_time).toLocaleTimeString('en-IN', {
-                                                      hour: '2-digit',
-                                                      minute: '2-digit',
-                                                  })}`
-                                                : ''}
-                                        </p>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3 text-xs text-slate-400">
-                                        <div className="flex items-center gap-2">
-                                            <Calendar size={14} />
-                                            <span>Live inventory</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Clock size={14} />
-                                            <span>5 min seat hold</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="border-b border-slate-800 py-4">
-                                    <p className="mb-2 text-sm text-slate-400">Selected Seats</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedSeats.map((seat) => (
-                                            <span key={seat.id} className="rounded-lg bg-blue-600/20 px-3 py-1.5 font-medium text-blue-400">
-                                                {seat.label}
-                                            </span>
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Seats Selected</Typography>
+                                    <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+                                        {selectedSeats.map(s => (
+                                            <Chip key={s.id} label={s.label} size="small" variant="outlined" sx={{ fontWeight: 900, borderRadius: 1.5, borderColor: 'primary.main', color: 'primary.main' }} />
                                         ))}
-                                    </div>
-                                </div>
+                                    </Stack>
+                                </Box>
+                            </Stack>
 
-                                <div className="space-y-2 py-4">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-400">Ticket Price ({selectedSeats.length} seats)</span>
-                                        <span className="text-white">₹{subtotal.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-400">GST (5%)</span>
-                                        <span className="text-white">₹{gst.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-400">Convenience Fee</span>
-                                        <span className="text-white">₹{convenienceFee.toLocaleString()}</span>
-                                    </div>
-                                    {couponDiscount > 0 && (
-                                        <div className="flex justify-between text-sm">
-                                            <span className="flex items-center gap-1 text-green-400">
-                                                <Tag size={12} />
-                                                Coupon ({appliedCoupon?.code})
-                                            </span>
-                                            <span className="font-bold text-green-400">-₹{couponDiscount.toLocaleString()}</span>
-                                        </div>
-                                    )}
-                                </div>
+                            <Divider sx={{ mb: 4 }} />
 
-                                <div className="flex items-center justify-between border-t border-slate-800 pt-4">
-                                    <span className="font-bold text-white">Total Amount</span>
-                                    <div className="text-right">
-                                        {couponDiscount > 0 && (
-                                            <p className="text-xs text-slate-500 line-through">₹{totalBeforeDiscount.toLocaleString()}</p>
-                                        )}
-                                        <span className="text-2xl font-bold text-white">₹{totalAmount.toLocaleString()}</span>
-                                    </div>
-                                </div>
-
+                            <Stack spacing={2} sx={{ mb: 4 }}>
+                                <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="text.secondary">Ticket Price</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 800 }}>₹{subtotal.toLocaleString()}</Typography>
+                                </Stack>
+                                <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="text.secondary">GST (5%)</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 800 }}>₹{gst.toLocaleString()}</Typography>
+                                </Stack>
+                                <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="text.secondary">Convenience Fee</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 800 }}>₹{convenienceFee.toLocaleString()}</Typography>
+                                </Stack>
                                 {couponDiscount > 0 && (
-                                    <div className="mt-2 rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-2 text-center">
-                                        <p className="text-xs font-bold text-green-400">🎉 You save ₹{couponDiscount.toLocaleString()} with this coupon!</p>
-                                    </div>
+                                    <Stack direction="row" justifyContent="space-between" sx={{ color: 'success.main' }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 700 }}>Coupon Discount</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 900 }}>-₹{couponDiscount.toLocaleString()}</Typography>
+                                    </Stack>
                                 )}
+                                <Divider />
+                                <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
+                                    <Typography variant="h6" sx={{ fontWeight: 900 }}>Total Amount</Typography>
+                                    <Typography variant="h4" sx={{ fontWeight: 900, color: 'primary.main' }}>₹{totalAmount.toLocaleString()}</Typography>
+                                </Stack>
+                            </Stack>
 
-                                <button onClick={handlePayment} disabled={loading} className="btn-primary mt-6 flex w-full items-center justify-center gap-2">
-                                    {loading ? (
-                                        <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
-                                    ) : (
-                                        <>
-                                            <Shield size={18} />
-                                            <span>Pay Securely</span>
-                                            <ChevronRight size={18} />
-                                        </>
-                                    )}
-                                </button>
+                            <Button
+                                fullWidth
+                                variant="contained"
+                                size="large"
+                                onClick={handlePayment}
+                                disabled={loading}
+                                startIcon={<Shield size={20} />}
+                                endIcon={<ChevronRight size={20} />}
+                                sx={{
+                                    py: 2,
+                                    borderRadius: 4,
+                                    fontWeight: 900,
+                                    fontSize: '1.1rem',
+                                    boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.4)}`,
+                                }}
+                            >
+                                {loading ? 'Processing...' : 'Pay Securely'}
+                            </Button>
 
-                                <p className="mt-4 text-center text-xs text-slate-500">
-                                    By proceeding, you agree to our Terms of Service and Cancellation Policy
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
+                            <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ mt: 3, opacity: 0.6 }}>
+                                <CreditCard size={14} />
+                                <Typography variant="caption" sx={{ fontWeight: 700 }}>Secure 256-bit SSL Encrypted Payment</Typography>
+                            </Stack>
+                        </Paper>
+                    </Grid>
+                </Grid>
+            </Container>
+        </Box>
     )
 }
