@@ -220,7 +220,7 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
                 <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, bgcolor: 'success.main', opacity: 0.8 }} />
 
                 <Grid container spacing={4}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             select
                             fullWidth
@@ -242,7 +242,7 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
                         </TextField>
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             select
                             fullWidth
@@ -264,9 +264,9 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
                         </TextField>
                     </Grid>
 
-                    <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
+                    <Grid size={{ xs: 12 }}><Divider sx={{ my: 1 }} /></Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             fullWidth
                             required
@@ -283,7 +283,7 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
                         />
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Box sx={{ position: 'relative' }}>
                             <TextField
                                 fullWidth
@@ -309,7 +309,7 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
                         </Box>
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             fullWidth
                             required
@@ -325,7 +325,7 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
                         />
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                             select
                             fullWidth
@@ -345,7 +345,7 @@ export default function EditTripPage({ params }: { params: Promise<{ id: string 
                         </TextField>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
                             <Button component={Link} href="/admin/trips" sx={{ borderRadius: 3, px: 4, fontWeight: 800, color: 'text.secondary' }}>Cancel</Button>
                             <Button

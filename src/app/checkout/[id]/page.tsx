@@ -281,7 +281,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
 
                 <Grid container spacing={4}>
                     {/* Left Column: Passenger Details */}
-                    <Grid item xs={12} lg={8}>
+                    <Grid size={{ xs: 12, lg: 8 }}>
                         <Stack spacing={4}>
                             {/* Seat Hold Warning */}
                             <Paper
@@ -334,7 +334,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                                                 </Box>
                                             </Stack>
                                             <Grid container spacing={3}>
-                                                <Grid item xs={12} sm={8}>
+                                                <Grid size={{ xs: 12, sm: 8 }}>
                                                     <TextField
                                                         fullWidth
                                                         label="Full Name"
@@ -345,7 +345,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                                                         InputProps={{ sx: { borderRadius: 3, fontWeight: 600 } }}
                                                     />
                                                 </Grid>
-                                                <Grid item xs={12} sm={4}>
+                                                <Grid size={{ xs: 12, sm: 4 }}>
                                                     <TextField
                                                         fullWidth
                                                         label="Age"
@@ -369,7 +369,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                                     Contact Details
                                 </Typography>
                                 <Grid container spacing={3}>
-                                    <Grid item xs={12} sm={6}>
+                                    <Grid size={{ xs: 12, sm: 6 }}>
                                         <TextField
                                             fullWidth
                                             label="Email Address"
@@ -382,7 +382,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                                             }}
                                         />
                                     </Grid>
-                                    <Grid item xs={12} sm={6}>
+                                    <Grid size={{ xs: 12, sm: 6 }}>
                                         <TextField
                                             fullWidth
                                             label="Phone Number"
@@ -447,7 +447,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                     </Grid>
 
                     {/* Right Column: Summary */}
-                    <Grid item xs={12} lg={4}>
+                    <Grid size={{ xs: 12, lg: 4 }}>
                         <Paper elevation={0} sx={{ p: 4, borderRadius: 8, border: '1px solid', borderColor: 'divider', position: 'sticky', top: 100, bgcolor: alpha(theme.palette.background.paper, 0.8), backdropFilter: 'blur(20px)' }}>
                             <Typography variant="h6" sx={{ fontWeight: 900, mb: 4 }}>Booking Summary</Typography>
                             

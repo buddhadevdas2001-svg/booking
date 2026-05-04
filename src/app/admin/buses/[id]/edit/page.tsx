@@ -52,7 +52,7 @@ export default function EditBusPage() {
     fetchBus()
   }, [busId])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const value = e.target.name === 'total_seats' ? Number(e.target.value) : e.target.value
     setForm((prev) => ({ ...prev, [e.target.name]: value }))
   }

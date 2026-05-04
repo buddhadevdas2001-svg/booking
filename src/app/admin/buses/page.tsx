@@ -19,6 +19,7 @@ import {
     Skeleton,
     Avatar,
     Tooltip,
+    Divider,
 } from '@mui/material'
 import {
     Bus,
@@ -126,12 +127,12 @@ export default function AdminBusesPage() {
             <Grid container spacing={3}>
                 {isLoading ? (
                     Array.from({ length: 6 }).map((_, i) => (
-                        <Grid item xs={12} sm={6} lg={4} key={i}>
+                        <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={i}>
                             <Skeleton variant="rounded" height={220} sx={{ borderRadius: 6 }} />
                         </Grid>
                     ))
                 ) : filtered.length === 0 ? (
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Paper sx={{ p: 10, textAlign: 'center', borderRadius: 8, border: '1px dashed', borderColor: 'divider', bgcolor: 'transparent' }}>
                             <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>No buses found</Typography>
                             <Typography variant="body2" color="text.secondary">Try adjusting your search or add a new vehicle.</Typography>
@@ -139,7 +140,7 @@ export default function AdminBusesPage() {
                     </Grid>
                 ) : (
                     filtered.map((bus) => (
-                        <Grid item xs={12} sm={6} lg={4} key={bus.id}>
+                        <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={bus.id}>
                             <Paper 
                                 elevation={0} 
                                 sx={{ 
@@ -173,11 +174,11 @@ export default function AdminBusesPage() {
                                     </Box>
 
                                     <Grid container spacing={2}>
-                                        <Grid item xs={6}>
+                                        <Grid size={{ xs: 6 }}>
                                             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Seats</Typography>
                                             <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>{bus.total_seats ?? '—'} Total</Typography>
                                         </Grid>
-                                        <Grid item xs={6}>
+                                        <Grid size={{ xs: 6 }}>
                                             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Status</Typography>
                                             <Stack direction="row" spacing={0.5} alignItems="center">
                                                 {bus.is_active !== false ? <CheckCircle2 size={12} className="text-success" /> : <XCircle size={12} className="text-error" />}
